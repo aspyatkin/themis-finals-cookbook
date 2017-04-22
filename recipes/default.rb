@@ -1,15 +1,8 @@
 id = 'themis-finals'
 
-include_recipe "#{id}::prerequisite_ntp"
-
-include_recipe 'latest-git::default'
 include_recipe "#{id}::prerequisite_ruby"
-include_recipe "#{id}::prerequisite_nodejs"
 
-include_recipe "#{id}::prerequisite_nginx"
-include_recipe 'latest-redis::default'
 include_recipe "#{id}::prerequisite_postgres"
-include_recipe 'supervisor::default'
 
 directory node[id]['basedir'] do
   owner node[id]['user']
@@ -19,7 +12,7 @@ directory node[id]['basedir'] do
   action :create
 end
 
-logs_basedir = ::File.join node[id]['basedir'], 'logs'
+logs_basedir = ::File.join(node[id]['basedir'], 'logs')
 
 directory logs_basedir do
   owner node[id]['user']
@@ -29,7 +22,7 @@ directory logs_basedir do
   action :create
 end
 
-team_logo_dir = ::File.join node[id]['basedir'], 'team_logo'
+team_logo_dir = ::File.join(node[id]['basedir'], 'team_logo')
 
 directory team_logo_dir do
   owner node[id]['user']
@@ -39,7 +32,7 @@ directory team_logo_dir do
   action :create
 end
 
-# include_recipe "#{id}::sentry"
+include_recipe "#{id}::sentry"
 include_recipe "#{id}::backend"
 include_recipe "#{id}::frontend"
 include_recipe "#{id}::stream"
@@ -47,18 +40,29 @@ include_recipe "#{id}::visualization"
 
 namespace = "#{node[id]['supervisor_namespace']}.master"
 
-supervisor_group namespace do
-  programs [
+all_programs = [
     "#{namespace}.stream",
     "#{namespace}.queue",
     "#{namespace}.scheduler",
-    "#{namespace}.server",
-    "#{namespace}.livetunnel"
-  ]
+    "#{namespace}.server"
+]
+
+enable_livetunnel = \
+  node[id].fetch('live', {}).fetch('enable', false) &&
+  !node[id].fetch('live', {}).fetch('server_username', nil).nil? &&
+  !node[id].fetch('live', {}).fetch('server_hostname', nil).nil? &&
+  !node[id].fetch('live', {}).fetch('remote_port', nil).nil?
+
+if enable_livetunnel
+  all_programs << "#{namespace}.livetunnel"
+end
+
+supervisor_group namespace do
+  programs all_programs
   action :enable
 end
 
-cleanup_script = ::File.join node[id]['basedir'], 'cleanup_logs'
+cleanup_script = ::File.join(node[id]['basedir'], 'cleanup_logs')
 
 template cleanup_script do
   source 'cleanup_logs.sh.erb'
@@ -71,7 +75,7 @@ template cleanup_script do
   )
 end
 
-archive_script = ::File.join node[id]['basedir'], 'archive_logs'
+archive_script = ::File.join(node[id]['basedir'], 'archive_logs')
 
 template archive_script do
   source 'archive_logs.sh.erb'
@@ -84,11 +88,8 @@ template archive_script do
   )
 end
 
-ngx_conf = 'themis-finals.conf'
-
-template "#{node['nginx']['dir']}/sites-available/#{ngx_conf}" do
-  source 'nginx.conf.erb'
-  mode 0644
+nginx_site 'themis-finals' do
+  template 'nginx.conf.erb'
   variables(
     server_name: node[id]['fqdn'],
     live_server_name: node[id].fetch('live', {}).fetch('fqdn', nil),
@@ -103,8 +104,5 @@ template "#{node['nginx']['dir']}/sites-available/#{ngx_conf}" do
     internal_networks: node[id]['config']['internal_networks'],
     team_networks: node[id]['config']['teams'].values.map { |x| x['network'] }
   )
-  notifies :reload, 'service[nginx]', :delayed
-  action :create
+  action :enable
 end
-
-nginx_site ngx_conf

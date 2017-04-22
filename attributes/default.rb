@@ -3,8 +3,8 @@ id = 'themis-finals'
 default[id]['user'] = 'vagrant'
 default[id]['group'] = 'vagrant'
 
-default[id]['ruby']['version'] = '2.3.1'
-default[id]['bundler_version'] = '1.12.5'
+default[id]['ruby']['version'] = '2.4.1'
+default[id]['bundler_version'] = '1.14.6'
 
 default[id]['postgres']['version'] = '9.5'
 default[id]['postgres']['dbname'] = 'themis-finals'
@@ -37,8 +37,8 @@ default[id]['stream']['processes'] = 2
 default[id]['visualization']['github_repository'] = 'themis-project/themis-finals-visualization'
 default[id]['visualization']['revision'] = 'master'
 
-# default[id]['sentry']['postgres']['username'] = 'sentry_user'
-# default[id]['sentry']['postgres']['dbname'] = 'sentry'
-# default[id]['sentry']['redis']['db'] = 2
-# default[id]['sentry']['listen']['address'] = '0.0.0.0'
-# default[id]['sentry']['listen']['port'] = 9000
+default[id]['sentry']['postgres']['username'] = 'sentry_user'
+default[id]['sentry']['postgres']['dbname'] = 'sentry'
+default[id]['sentry']['redis']['db'] = 2
+default[id]['sentry']['listen']['address'] = '0.0.0.0'
+default[id]['sentry']['listen']['port'] = 9000

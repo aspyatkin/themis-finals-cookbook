@@ -1,6 +1,6 @@
 id = 'themis-finals'
 
-basedir = ::File.join node[id]['basedir'], 'frontend'
+basedir = ::File.join(node[id]['basedir'], 'frontend')
 url_repository = "https://github.com/#{node[id]['frontend']['github_repository']}"
 
 directory basedir do
@@ -11,7 +11,7 @@ directory basedir do
   action :create
 end
 
-if node.chef_environment.start_with? 'development'
+if node.chef_environment.start_with?('development')
   ssh_private_key node[id]['user']
   ssh_known_hosts_entry 'github.com'
   url_repository = "git@github.com:#{node[id]['frontend']['github_repository']}.git"
@@ -25,15 +25,15 @@ git2 basedir do
   action :create
 end
 
-if node.chef_environment.start_with? 'development'
+if node.chef_environment.start_with?('development')
   git_data_bag_item = nil
   begin
     git_data_bag_item = data_bag_item('git', node.chef_environment)
   rescue
-    ::Chef::Log.warn 'Check whether git data bag exists!'
+    ::Chef::Log.warn('Check whether git data bag exists!')
   end
 
-  git_options = (git_data_bag_item.nil?) ? {} : git_data_bag_item.to_hash.fetch('config', {})
+  git_options = git_data_bag_item.nil? ? {} : git_data_bag_item.to_hash.fetch('config', {})
 
   git_options.each do |key, value|
     git_config "git-config #{key} at #{basedir}" do
@@ -47,12 +47,9 @@ if node.chef_environment.start_with? 'development'
   end
 end
 
-nodejs_npm "Install dependencies at #{basedir}" do
-  package '.'
-  path basedir
-  json true
+yarn_install basedir do
   user node[id]['user']
-  group node[id]['group']
+  action :run
 end
 
 execute "Copy customization file at #{basedir}" do
@@ -63,13 +60,10 @@ execute "Copy customization file at #{basedir}" do
   not_if "test -e #{basedir}/customize.js"
 end
 
-execute "Build assets at #{basedir}" do
-  command 'npm run gulp'
-  cwd basedir
+yarn_run "Build scripts at #{basedir}" do
+  script 'build'
   user node[id]['user']
-  group node[id]['group']
-  environment(
-    'HOME' => "/home/#{node[id]['user']}",
-    'NODE_ENV' => node.chef_environment
-  )
+  dir basedir
+  production node.chef_environment.start_with?('production')
+  action :run
 end

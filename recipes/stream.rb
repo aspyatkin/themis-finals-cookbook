@@ -1,7 +1,7 @@
 require 'json'
 id = 'themis-finals'
 
-basedir = ::File.join node[id]['basedir'], 'stream'
+basedir = ::File.join(node[id]['basedir'], 'stream')
 url_repository = "https://github.com/#{node[id]['stream']['github_repository']}"
 
 directory basedir do
@@ -12,7 +12,7 @@ directory basedir do
   action :create
 end
 
-if node.chef_environment.start_with? 'development'
+if node.chef_environment.start_with?('development')
   ssh_private_key node[id]['user']
   ssh_known_hosts_entry 'github.com'
   url_repository = "git@github.com:#{node[id]['stream']['github_repository']}.git"
@@ -26,15 +26,15 @@ git2 basedir do
   action :create
 end
 
-if node.chef_environment.start_with? 'development'
+if node.chef_environment.start_with?('development')
   git_data_bag_item = nil
   begin
     git_data_bag_item = data_bag_item('git', node.chef_environment)
   rescue
-    ::Chef::Log.warn 'Check whether git data bag exists!'
+    ::Chef::Log.warn('Check whether git data bag exists!')
   end
 
-  git_options = (git_data_bag_item.nil?) ? {} : git_data_bag_item.to_hash.fetch('config', {})
+  git_options = git_data_bag_item.nil? ? {} : git_data_bag_item.to_hash.fetch('config', {})
 
   git_options.each do |key, value|
     git_config "git-config #{key} at #{basedir}" do
@@ -48,24 +48,18 @@ if node.chef_environment.start_with? 'development'
   end
 end
 
-nodejs_npm "Install dependencies at #{basedir}" do
-  package '.'
-  path basedir
-  json true
+yarn_install basedir do
   user node[id]['user']
-  group node[id]['group']
+  action :run
 end
 
-logs_basedir = ::File.join node[id]['basedir'], 'logs'
+logs_basedir = ::File.join(node[id]['basedir'], 'logs')
 
-execute 'Build stream scripts' do
-  command 'npm run build'
-  cwd basedir
+yarn_run "Build scripts at #{basedir}" do
+  script 'build'
   user node[id]['user']
-  group node[id]['group']
-  environment(
-    'HOME' => "/home/#{node[id]['user']}"
-  )
+  dir basedir
+  action :run
 end
 
 config = {
@@ -75,13 +69,13 @@ config = {
   }
 }
 
-config_file = ::File.join basedir, 'config.json'
+config_file = ::File.join(basedir, 'config.json')
 
 file config_file do
   owner node[id]['user']
   group node[id]['group']
   mode 0644
-  content JSON.pretty_generate(config)
+  content ::JSON.pretty_generate(config)
   action :create
 end
 
@@ -102,12 +96,12 @@ supervisor_service "#{node[id]['supervisor_namespace']}.master.stream" do
   killasgroup false
   user node[id]['user']
   redirect_stderr false
-  stdout_logfile ::File.join logs_basedir, 'stream-%(process_num)s-stdout.log'
+  stdout_logfile ::File.join(logs_basedir, 'stream-%(process_num)s-stdout.log')
   stdout_logfile_maxbytes '10MB'
   stdout_logfile_backups 10
   stdout_capture_maxbytes '0'
   stdout_events_enabled false
-  stderr_logfile ::File.join logs_basedir, 'stream-%(process_num)s-stderr.log'
+  stderr_logfile ::File.join(logs_basedir, 'stream-%(process_num)s-stderr.log')
   stderr_logfile_maxbytes '10MB'
   stderr_logfile_backups 10
   stderr_capture_maxbytes '0'

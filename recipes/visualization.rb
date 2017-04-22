@@ -1,6 +1,6 @@
 id = 'themis-finals'
 
-basedir = ::File.join node[id]['basedir'], 'visualization'
+basedir = ::File.join(node[id]['basedir'], 'visualization')
 url_repository = "https://github.com/#{node[id]['visualization']['github_repository']}"
 
 directory basedir do
@@ -11,7 +11,7 @@ directory basedir do
   action :create
 end
 
-if node.chef_environment.start_with? 'development'
+if node.chef_environment.start_with?('development')
   ssh_private_key node[id]['user']
   ssh_known_hosts_entry 'github.com'
   url_repository = "git@github.com:#{node[id]['visualization']['github_repository']}.git"
@@ -25,15 +25,15 @@ git2 basedir do
   action :create
 end
 
-if node.chef_environment.start_with? 'development'
+if node.chef_environment.start_with?('development')
   git_data_bag_item = nil
   begin
     git_data_bag_item = data_bag_item('git', node.chef_environment)
   rescue
-    ::Chef::Log.warn 'Check whether git data bag exists!'
+    ::Chef::Log.warn('Check whether git data bag exists!')
   end
 
-  git_options = (git_data_bag_item.nil?) ? {} : git_data_bag_item.to_hash.fetch('config', {})
+  git_options = git_data_bag_item.nil? ? {} : git_data_bag_item.to_hash.fetch('config', {})
 
   git_options.each do |key, value|
     git_config "git-config #{key} at #{basedir}" do

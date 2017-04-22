@@ -1,6 +1,6 @@
 id = 'themis-finals'
 
-basedir = ::File.join node[id]['basedir'], 'backend'
+basedir = ::File.join(node[id]['basedir'], 'backend')
 url_repository = "https://github.com/#{node[id]['backend']['github_repository']}"
 
 directory basedir do
@@ -11,7 +11,7 @@ directory basedir do
   action :create
 end
 
-if node.chef_environment.start_with? 'development'
+if node.chef_environment.start_with?('development')
   ssh_private_key node[id]['user']
   ssh_known_hosts_entry 'github.com'
   url_repository = "git@github.com:#{node[id]['backend']['github_repository']}.git"
@@ -25,15 +25,15 @@ git2 basedir do
   action :create
 end
 
-if node.chef_environment.start_with? 'development'
+if node.chef_environment.start_with?('development')
   git_data_bag_item = nil
   begin
     git_data_bag_item = data_bag_item('git', node.chef_environment)
   rescue
-    ::Chef::Log.warn 'Check whether git data bag exists!'
+    ::Chef::Log.warn('Check whether git data bag exists!')
   end
 
-  git_options = (git_data_bag_item.nil?) ? {} : git_data_bag_item.to_hash.fetch('config', {})
+  git_options = git_data_bag_item.nil? ? {} : git_data_bag_item.to_hash.fetch('config', {})
 
   git_options.each do |key, value|
     git_config "git-config #{key} at #{basedir}" do
@@ -55,7 +55,7 @@ rbenv_execute "Install dependencies at #{basedir}" do
   group node[id]['group']
 end
 
-config_file = ::File.join basedir, 'config.rb'
+config_file = ::File.join(basedir, 'config.rb')
 
 template config_file do
   source 'config.rb.erb'
@@ -71,7 +71,7 @@ template config_file do
   action :create
 end
 
-dotenv_file = ::File.join basedir, '.env'
+dotenv_file = ::File.join(basedir, '.env')
 
 template dotenv_file do
   source 'dotenv.erb'
@@ -93,7 +93,7 @@ template dotenv_file do
   action :create
 end
 
-dump_db_script = ::File.join node[id]['basedir'], 'dump_main_db'
+dump_db_script = ::File.join(node[id]['basedir'], 'dump_main_db')
 
 template dump_db_script do
   source 'dump_db.sh.erb'
@@ -109,7 +109,7 @@ template dump_db_script do
   )
 end
 
-logs_basedir = ::File.join node[id]['basedir'], 'logs'
+logs_basedir = ::File.join(node[id]['basedir'], 'logs')
 
 supervisor_service "#{node[id]['supervisor_namespace']}.master.queue" do
   command 'sh script/queue'
@@ -128,12 +128,12 @@ supervisor_service "#{node[id]['supervisor_namespace']}.master.queue" do
   killasgroup true
   user node[id]['user']
   redirect_stderr false
-  stdout_logfile ::File.join logs_basedir, 'queue-%(process_num)s-stdout.log'
+  stdout_logfile ::File.join(logs_basedir, 'queue-%(process_num)s-stdout.log')
   stdout_logfile_maxbytes '10MB'
   stdout_logfile_backups 10
   stdout_capture_maxbytes '0'
   stdout_events_enabled false
-  stderr_logfile ::File.join logs_basedir, 'queue-%(process_num)s-stderr.log'
+  stderr_logfile ::File.join(logs_basedir, 'queue-%(process_num)s-stderr.log')
   stderr_logfile_maxbytes '10MB'
   stderr_logfile_backups 10
   stderr_capture_maxbytes '0'
@@ -157,7 +157,10 @@ supervisor_service "#{node[id]['supervisor_namespace']}.master.queue" do
     'THEMIS_FINALS_AUTH_TOKEN_HEADER' => node[id]['auth_token_header'],
     'THEMIS_FINALS_STREAM_REDIS_DB' => node[id]['stream']['redis_db'],
     'THEMIS_FINALS_QUEUE_REDIS_DB' => node[id]['backend']['queue']['redis_db'],
-    'THEMIS_FINALS_STREAM_REDIS_CHANNEL_NAMESPACE' => node[id]['stream']['redis_channel_namespace']
+    'THEMIS_FINALS_STREAM_REDIS_CHANNEL_NAMESPACE' => node[id]['stream']['redis_channel_namespace'],
+    'THEMIS_FINALS_FLAG_SIGN_KEY_PRIVATE' => data_bag_item('themis-finals', node.chef_environment)['sign_key']['private'].gsub("\n", "\\n"),
+    'THEMIS_FINALS_FLAG_WRAP_PREFIX' => node[id]['flag_wrap']['prefix'],
+    'THEMIS_FINALS_FLAG_WRAP_SUFFIX' => node[id]['flag_wrap']['suffix']
   )
   directory basedir
   serverurl 'AUTO'
@@ -181,12 +184,12 @@ supervisor_service "#{node[id]['supervisor_namespace']}.master.scheduler" do
   killasgroup true
   user node[id]['user']
   redirect_stderr false
-  stdout_logfile ::File.join logs_basedir, 'scheduler-stdout.log'
+  stdout_logfile ::File.join(logs_basedir, 'scheduler-stdout.log')
   stdout_logfile_maxbytes '10MB'
   stdout_logfile_backups 10
   stdout_capture_maxbytes '0'
   stdout_events_enabled false
-  stderr_logfile ::File.join logs_basedir, 'scheduler-stderr.log'
+  stderr_logfile ::File.join(logs_basedir, 'scheduler-stderr.log')
   stderr_logfile_maxbytes '10MB'
   stderr_logfile_backups 10
   stderr_capture_maxbytes '0'
@@ -212,7 +215,7 @@ supervisor_service "#{node[id]['supervisor_namespace']}.master.scheduler" do
   action :enable
 end
 
-team_logo_dir = ::File.join node[id]['basedir'], 'team_logo'
+team_logo_dir = ::File.join(node[id]['basedir'], 'team_logo')
 
 supervisor_service "#{node[id]['supervisor_namespace']}.master.server" do
   command 'sh script/server'
@@ -231,12 +234,12 @@ supervisor_service "#{node[id]['supervisor_namespace']}.master.server" do
   killasgroup true
   user node[id]['user']
   redirect_stderr false
-  stdout_logfile ::File.join logs_basedir, 'server-%(process_num)s-stdout.log'
+  stdout_logfile ::File.join(logs_basedir, 'server-%(process_num)s-stdout.log')
   stdout_logfile_maxbytes '10MB'
   stdout_logfile_backups 10
   stdout_capture_maxbytes '0'
   stdout_events_enabled false
-  stderr_logfile ::File.join logs_basedir, 'server-%(process_num)s-stderr.log'
+  stderr_logfile ::File.join(logs_basedir, 'server-%(process_num)s-stderr.log')
   stderr_logfile_maxbytes '10MB'
   stderr_logfile_backups 10
   stderr_capture_maxbytes '0'
@@ -271,6 +274,7 @@ supervisor_service "#{node[id]['supervisor_namespace']}.master.server" do
 end
 
 enable_livetunnel = \
+  node[id].fetch('live', {}).fetch('enable', false) &&
   !node[id].fetch('live', {}).fetch('server_username', nil).nil? &&
   !node[id].fetch('live', {}).fetch('server_hostname', nil).nil? &&
   !node[id].fetch('live', {}).fetch('remote_port', nil).nil?
@@ -297,12 +301,12 @@ supervisor_service "#{node[id]['supervisor_namespace']}.master.livetunnel" do
   killasgroup true
   user node[id]['user']
   redirect_stderr false
-  stdout_logfile ::File.join logs_basedir, 'livetunnel-stdout.log'
+  stdout_logfile ::File.join(logs_basedir, 'livetunnel-stdout.log')
   stdout_logfile_maxbytes '10MB'
   stdout_logfile_backups 10
   stdout_capture_maxbytes '0'
   stdout_events_enabled false
-  stderr_logfile ::File.join logs_basedir, 'livetunnel-stderr.log'
+  stderr_logfile ::File.join(logs_basedir, 'livetunnel-stderr.log')
   stderr_logfile_maxbytes '10MB'
   stderr_logfile_backups 10
   stderr_capture_maxbytes '0'
@@ -315,5 +319,5 @@ supervisor_service "#{node[id]['supervisor_namespace']}.master.livetunnel" do
   )
   directory basedir
   serverurl 'AUTO'
-  action (enable_livetunnel ? :enable : :disable)
+  action enable_livetunnel ? :enable : :disable
 end
