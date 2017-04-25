@@ -266,7 +266,8 @@ supervisor_service "#{node[id]['supervisor_namespace']}.master.server" do
     'THEMIS_FINALS_AUTH_TOKEN_HEADER' => node[id]['auth_token_header'],
     'THEMIS_FINALS_STREAM_REDIS_DB' => node[id]['stream']['redis_db'],
     'THEMIS_FINALS_QUEUE_REDIS_DB' => node[id]['backend']['queue']['redis_db'],
-    'THEMIS_FINALS_STREAM_REDIS_CHANNEL_NAMESPACE' => node[id]['stream']['redis_channel_namespace']
+    'THEMIS_FINALS_STREAM_REDIS_CHANNEL_NAMESPACE' => node[id]['stream']['redis_channel_namespace'],
+    'THEMIS_FINALS_FLAG_SIGN_KEY_PUBLIC' => data_bag_item('themis-finals', node.chef_environment)['sign_key']['public'].gsub("\n", "\\n"),
   )
   directory basedir
   serverurl 'AUTO'
