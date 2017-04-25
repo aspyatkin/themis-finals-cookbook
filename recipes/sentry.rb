@@ -116,20 +116,46 @@ template new_conf_file do
   group node[id]['group']
   variables(
     secret_key: data_bag_item('sentry', node.chef_environment)['secret_key'],
+    url_prefix: "http://#{node[id]['fqdn']}:#{node[id]['sentry']['listen']['port']}",
     redis_host: node['latest-redis']['listen']['address'],
     redis_port: node['latest-redis']['listen']['port'],
     redis_db: node[id]['sentry']['redis']['db']
   )
 end
 
-execute 'Run Sentry database migration' do
-  command "sentry upgrade --noinput"
+python_execute 'Run Sentry database migration' do
+  command '-m sentry upgrade --noinput'
   cwd basedir
   user node[id]['user']
   group node[id]['group']
   environment(
-    'PATH' => "#{::File.join(virtualenv_path, 'bin')}:#{ENV['PATH']}",
     'SENTRY_CONF' => basedir
+  )
+  action :run
+end
+
+bootstrap_script = ::File.join(basedir, 'bootstrap.py')
+
+cookbook_file bootstrap_script do
+  source 'sentry_bootstrap.py'
+  owner node[id]['user']
+  group node[id]['group']
+  mode 0644
+  action :create
+end
+
+python_execute 'Bootstrap Sentry' do
+  command 'bootstrap.py'
+  cwd basedir
+  user node[id]['user']
+  group node[id]['group']
+  environment(
+    'SENTRY_CONF' => basedir,
+    'THEMIS_FINALS_SENTRY_ORGANIZATION' => node[id]['sentry']['config']['organization'],
+    'THEMIS_FINALS_SENTRY_TEAMS' => node[id]['sentry']['config']['teams'].join(';'),
+    'THEMIS_FINALS_SENTRY_PROJECTS' => node[id]['sentry']['config']['projects'].map { |x, y| "#{x}:#{y.join(',')}" }.join(';'),
+    'THEMIS_FINALS_SENTRY_ADMINS' => data_bag_item('sentry', node.chef_environment)['admins'].map { |x, y| "#{x}:#{y}" }.join(';'),
+    'THEMIS_FINALS_SENTRY_USERS' => data_bag_item('sentry', node.chef_environment)['users'].map { |x, y| "#{x}:#{y}" }.join(';')
   )
   action :run
 end

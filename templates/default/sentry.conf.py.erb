@@ -143,3 +143,6 @@ SENTRY_WEB_OPTIONS = {
     # 'workers': 3,  # the number of web workers
     # 'protocol': 'uwsgi',  # Enable uwsgi protocol instead of http
 }
+
+SENTRY_BEACON = False
+SENTRY_FEATURES['auth:register'] = False

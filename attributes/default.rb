@@ -42,3 +42,9 @@ default[id]['sentry']['postgres']['dbname'] = 'sentry'
 default[id]['sentry']['redis']['db'] = 2
 default[id]['sentry']['listen']['address'] = '0.0.0.0'
 default[id]['sentry']['listen']['port'] = 9000
+
+default[id]['sentry']['config']['organization'] = nil
+default[id]['sentry']['config']['teams'] = []
+default[id]['sentry']['config']['projects'] = {}
+default[id]['sentry']['config']['admins'] = []
+default[id]['sentry']['config']['users'] = []

@@ -33,7 +33,9 @@ mail.backend: 'dummy'  # Use dummy if you want to disable email entirely
 # If this file ever becomes compromised, it's important to regenerate your a new key
 # Changing this value will result in all current sessions being invalidated.
 # A new key can be generated with `$ sentry config generate-secret-key`
+system.admin-email: 'admin@localhost'
 system.secret-key: '<%= @secret_key %>'
+system.url-prefix: '<%= @url_prefix %>'
 
 # The ``redis.clusters`` setting is used, unsurprisingly, to configure Redis
 # clusters. These clusters can be then referred to by name when configuring
