@@ -1,6 +1,6 @@
 name 'themis-finals'
 description 'Installs and configures Themis Finals'
-version '1.3.2'
+version '1.3.3'
 
 recipe 'themis-finals', 'Installs and configures Themis Finals'
 depends 'git', '~> 6.0.0'
@@ -17,3 +17,6 @@ depends 'chef_nginx', '~> 6.0.1'
 depends 'ssh-private-keys', '~> 2.0.0'
 depends 'ssh_known_hosts', '~> 5.1.0'
 depends 'yarn', '~> 0.3.0'
+
+depends 'themis-finals-customize-default', '~> 1.0.0'
+depends 'themis-finals-customize-volgactf-2016-finals', '~> 1.0.0'

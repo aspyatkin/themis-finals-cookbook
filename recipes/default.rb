@@ -32,6 +32,21 @@ directory team_logo_dir do
   action :create
 end
 
+customize_cookbook = node[id].fetch('customize_cookbook', nil)
+unless customize_cookbook.nil?
+  node[id].fetch('team_logo_files', {}).each do |name_, path_path|
+    full_path = ::File.join(team_logo_dir, path_path)
+    cookbook_file full_path do
+      cookbook customize_cookbook
+      source name_
+      owner node[id]['user']
+      group node[id]['group']
+      mode 0644
+      action :create
+    end
+  end
+end
+
 include_recipe "#{id}::sentry"
 include_recipe "#{id}::backend"
 include_recipe "#{id}::frontend"

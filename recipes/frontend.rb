@@ -52,12 +52,39 @@ yarn_install basedir do
   action :run
 end
 
-execute "Copy customization file at #{basedir}" do
-  command 'cp customize.example.js customize.js'
-  cwd basedir
-  user node[id]['user']
-  group node[id]['group']
-  not_if "test -e #{basedir}/customize.js"
+customize_cookbook = node[id].fetch('customize_cookbook', nil)
+frontend_customize_module = node[id].fetch('frontend_customize_module', nil)
+if customize_cookbook.nil? || frontend_customize_module.nil?
+  execute "Copy customization file at #{basedir}" do
+    command 'cp customize.example.js customize.js'
+    cwd basedir
+    user node[id]['user']
+    group node[id]['group']
+    not_if "test -e #{basedir}/customize.js"
+  end
+else
+  cookbook_file ::File.join(basedir, 'customize.js') do
+    cookbook customize_cookbook
+    source frontend_customize_module
+    owner node[id]['user']
+    group node[id]['group']
+    mode 0644
+    action :create
+  end
+end
+
+unless customize_cookbook.nil?
+  node[id].fetch('frontend_extra_files', {}).each do |name_, path_path|
+    full_path = ::File.join(basedir, path_path)
+    cookbook_file full_path do
+      cookbook customize_cookbook
+      source name_
+      owner node[id]['user']
+      group node[id]['group']
+      mode 0644
+      action :create
+    end
+  end
 end
 
 yarn_run "Build scripts at #{basedir}" do
