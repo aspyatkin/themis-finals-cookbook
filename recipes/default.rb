@@ -117,7 +117,8 @@ nginx_site 'themis-finals' do
     stream_processes: node[id]['stream']['processes'],
     stream_port_range_start: node[id]['stream']['port_range_start'],
     internal_networks: node[id]['config']['internal_networks'],
-    team_networks: node[id]['config']['teams'].values.map { |x| x['network'] }
+    team_networks: node[id]['config']['teams'].values.map { |x| x['network'] },
+    contest_title: node[id]['config']['contest']['title']
   )
   action :enable
 end

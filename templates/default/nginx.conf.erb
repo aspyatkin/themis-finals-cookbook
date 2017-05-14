@@ -102,7 +102,9 @@ server {
     proxy_read_timeout 1h;
   }
 
-  location /visualization/ {
+  location /visualization {
+    set $contest_title "<%= @contest_title %>";
+    ssi on;
     root <%= @visualization_basedir %>;
   }
 }
