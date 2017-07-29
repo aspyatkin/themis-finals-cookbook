@@ -20,14 +20,14 @@ module Themis
       team '<%= team_alias %>' do
         name '<%= team_data['name'] %>'
         network '<%= team_data['network'] %>'
-        host '<%= team_data['host'] %>'
+        guest <%= team_data.has_key?('guest') ? team_data['guest'].to_s : 'false' %>
       end
       <% end %>
 
       <% @services.each do |service_alias, service_data| %>
       service '<%= service_alias %>' do
         name '<%= service_data['name'] %>'
-        protocol <%= service_data['protocol'] %>
+        hostmask '<%= service_data['hostmask'] %>'
         metadata push_url: '<%= service_data['metadata']['push_url'] %>', pull_url: '<%= service_data['metadata']['pull_url'] %>'
       end
       <% end %>
