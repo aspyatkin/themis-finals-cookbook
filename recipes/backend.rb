@@ -1,18 +1,19 @@
 id = 'themis-finals'
+h = ::ChefCookbook::Instance::Helper.new(node)
 
 basedir = ::File.join(node[id]['basedir'], 'backend')
 url_repository = "https://github.com/#{node[id]['backend']['github_repository']}"
 
 directory basedir do
-  owner node[id]['user']
-  group node[id]['group']
+  owner h.instance_user
+  group h.instance_group
   mode 0755
   recursive true
   action :create
 end
 
 if node.chef_environment.start_with?('development')
-  ssh_private_key node[id]['user']
+  ssh_private_key h.instance_user
   ssh_known_hosts_entry 'github.com'
   url_repository = "git@github.com:#{node[id]['backend']['github_repository']}.git"
 end
@@ -20,8 +21,8 @@ end
 git2 basedir do
   url url_repository
   branch node[id]['backend']['revision']
-  user node[id]['user']
-  group node[id]['group']
+  user h.instance_user
+  group h.instance_group
   action :create
 end
 
@@ -41,7 +42,7 @@ if node.chef_environment.start_with?('development')
       value value
       scope 'local'
       path basedir
-      user node[id]['user']
+      user h.instance_user
       action :set
     end
   end
@@ -51,16 +52,16 @@ rbenv_execute "Install dependencies at #{basedir}" do
   command 'bundle'
   ruby_version node[id]['ruby']['version']
   cwd basedir
-  user node[id]['user']
-  group node[id]['group']
+  user h.instance_user
+  group h.instance_group
 end
 
 config_file = ::File.join(basedir, 'config.rb')
 
 template config_file do
   source 'config.rb.erb'
-  user node[id]['user']
-  group node[id]['group']
+  user h.instance_user
+  group h.instance_group
   mode 0644
   variables(
     internal_networks: node[id]['config']['internal_networks'],
@@ -75,8 +76,8 @@ dotenv_file = ::File.join(basedir, '.env')
 
 template dotenv_file do
   source 'dotenv.erb'
-  user node[id]['user']
-  group node[id]['group']
+  user h.instance_user
+  group h.instance_group
   mode 0600
   variables(
     redis_host: node['latest-redis']['listen']['address'],
@@ -97,8 +98,8 @@ dump_db_script = ::File.join(node[id]['basedir'], 'dump_main_db')
 
 template dump_db_script do
   source 'dump_db.sh.erb'
-  owner node[id]['user']
-  group node[id]['group']
+  owner h.instance_user
+  group h.instance_group
   mode 0775
   variables(
     pg_host: node[id]['postgres']['host'],
@@ -126,7 +127,7 @@ supervisor_service "#{node[id]['supervisor_namespace']}.master.queue" do
   stopwaitsecs 10
   stopasgroup true
   killasgroup true
-  user node[id]['user']
+  user h.instance_user
   redirect_stderr false
   stdout_logfile ::File.join(logs_basedir, 'queue-%(process_num)s-stdout.log')
   stdout_logfile_maxbytes '10MB'
@@ -182,7 +183,7 @@ supervisor_service "#{node[id]['supervisor_namespace']}.master.scheduler" do
   stopwaitsecs 10
   stopasgroup true
   killasgroup true
-  user node[id]['user']
+  user h.instance_user
   redirect_stderr false
   stdout_logfile ::File.join(logs_basedir, 'scheduler-stdout.log')
   stdout_logfile_maxbytes '10MB'
@@ -232,7 +233,7 @@ supervisor_service "#{node[id]['supervisor_namespace']}.master.server" do
   stopwaitsecs 10
   stopasgroup true
   killasgroup true
-  user node[id]['user']
+  user h.instance_user
   redirect_stderr false
   stdout_logfile ::File.join(logs_basedir, 'server-%(process_num)s-stdout.log')
   stdout_logfile_maxbytes '10MB'
@@ -272,53 +273,4 @@ supervisor_service "#{node[id]['supervisor_namespace']}.master.server" do
   directory basedir
   serverurl 'AUTO'
   action :enable
-end
-
-enable_livetunnel = \
-  node[id].fetch('live', {}).fetch('enable', false) &&
-  !node[id].fetch('live', {}).fetch('server_username', nil).nil? &&
-  !node[id].fetch('live', {}).fetch('server_hostname', nil).nil? &&
-  !node[id].fetch('live', {}).fetch('remote_port', nil).nil?
-
-if enable_livetunnel
-  ssh_private_key node[id]['user']
-  ssh_known_hosts_entry node[id]['live']['server_hostname']
-end
-
-supervisor_service "#{node[id]['supervisor_namespace']}.master.livetunnel" do
-  command 'sh script/livetunnel'
-  process_name 'livetunnel'
-  numprocs 1
-  numprocs_start 0
-  priority 300
-  autostart node[id]['autostart']
-  autorestart true
-  startsecs 1
-  startretries 3
-  exitcodes [0, 2]
-  stopsignal :INT
-  stopwaitsecs 10
-  stopasgroup true
-  killasgroup true
-  user node[id]['user']
-  redirect_stderr false
-  stdout_logfile ::File.join(logs_basedir, 'livetunnel-stdout.log')
-  stdout_logfile_maxbytes '10MB'
-  stdout_logfile_backups 10
-  stdout_capture_maxbytes '0'
-  stdout_events_enabled false
-  stderr_logfile ::File.join(logs_basedir, 'livetunnel-stderr.log')
-  stderr_logfile_maxbytes '10MB'
-  stderr_logfile_backups 10
-  stderr_capture_maxbytes '0'
-  stderr_events_enabled false
-  environment(
-    'PATH' => '/usr/bin/env:%(ENV_PATH)s',
-    'REMOTE_PORT' => node[id].fetch('live', {}).fetch('remote_port', nil),
-    'SERVER_USERNAME' => node[id].fetch('live', {}).fetch('server_username', nil),
-    'SERVER_HOSTNAME' => node[id].fetch('live', {}).fetch('server_hostname', nil)
-  )
-  directory basedir
-  serverurl 'AUTO'
-  action enable_livetunnel ? :enable : :disable
 end

@@ -2,13 +2,18 @@ include_recipe 'libxml2::default'
 include_recipe 'libxslt::default'
 include_recipe 'libffi::default'
 
+package 'libjpeg-dev' do
+  action :install
+end
+
 id = 'themis-finals'
+h = ::ChefCookbook::Instance::Helper.new(node)
 
 basedir = ::File.join(node[id]['basedir'], 'sentry')
 
 directory basedir do
-  owner node[id]['user']
-  group node[id]['group']
+  owner h.instance_user
+  group h.instance_group
   mode 0755
   recursive true
   action :create
@@ -17,8 +22,8 @@ end
 logs_dir = ::File.join(basedir, 'logs')
 
 directory logs_dir do
-  owner node[id]['user']
-  group node[id]['group']
+  owner h.instance_user
+  group h.instance_group
   mode 0755
   action :create
 end
@@ -26,8 +31,8 @@ end
 virtualenv_path = ::File.join(basedir, '.venv')
 
 python_virtualenv virtualenv_path do
-  user node[id]['user']
-  group node[id]['group']
+  user h.instance_user
+  group h.instance_group
   python '2'
   action :create
 end
@@ -36,15 +41,15 @@ requirements_file = ::File.join(basedir, 'requirements.txt')
 
 cookbook_file requirements_file do
   source 'requirements.txt'
-  owner node[id]['user']
-  group node[id]['group']
+  owner h.instance_user
+  group h.instance_group
   mode 0644
   action :create
 end
 
 pip_requirements requirements_file do
-  user node[id]['user']
-  group node[id]['group']
+  user h.instance_user
+  group h.instance_group
   virtualenv virtualenv_path
   action :install
 end
@@ -75,8 +80,8 @@ dump_db_script = ::File.join(node[id]['basedir'], 'dump_sentry_db')
 
 template dump_db_script do
   source 'dump_db.sh.erb'
-  owner node[id]['user']
-  group node[id]['group']
+  owner h.instance_user
+  group h.instance_group
   mode 0775
   variables(
     pg_host: node[id]['postgres']['host'],
@@ -91,8 +96,8 @@ conf_file = ::File.join(basedir, 'sentry.conf.py')
 
 template conf_file do
   source 'sentry.conf.py.erb'
-  owner node[id]['user']
-  group node[id]['group']
+  owner h.instance_user
+  group h.instance_group
   variables(
     sentry_host: node[id]['sentry']['listen']['address'],
     sentry_port: node[id]['sentry']['listen']['port'],
@@ -112,8 +117,8 @@ new_conf_file = ::File.join(basedir, 'config.yml')
 
 template new_conf_file do
   source 'sentry.config.yml.erb'
-  owner node[id]['user']
-  group node[id]['group']
+  owner h.instance_user
+  group h.instance_group
   variables(
     secret_key: data_bag_item('sentry', node.chef_environment)['secret_key'],
     url_prefix: "http://#{node[id]['fqdn']}:#{node[id]['sentry']['listen']['port']}",
@@ -126,8 +131,8 @@ end
 python_execute 'Run Sentry database migration' do
   command '-m sentry upgrade --noinput'
   cwd basedir
-  user node[id]['user']
-  group node[id]['group']
+  user h.instance_user
+  group h.instance_group
   environment(
     'SENTRY_CONF' => basedir
   )
@@ -138,8 +143,8 @@ bootstrap_script = ::File.join(basedir, 'bootstrap.py')
 
 cookbook_file bootstrap_script do
   source 'sentry_bootstrap.py'
-  owner node[id]['user']
-  group node[id]['group']
+  owner h.instance_user
+  group h.instance_group
   mode 0644
   action :create
 end
@@ -147,8 +152,8 @@ end
 python_execute 'Bootstrap Sentry' do
   command 'bootstrap.py'
   cwd basedir
-  user node[id]['user']
-  group node[id]['group']
+  user h.instance_user
+  group h.instance_group
   environment(
     'SENTRY_CONF' => basedir,
     'THEMIS_FINALS_SENTRY_ORGANIZATION' => node[id]['sentry']['config']['organization'],
@@ -177,7 +182,7 @@ supervisor_service "#{namespace}.web" do
   stopwaitsecs 10
   stopasgroup false
   killasgroup false
-  user node[id]['user']
+  user h.instance_user
   redirect_stderr false
   stdout_logfile ::File.join(logs_dir, 'web-stdout.log')
   stdout_logfile_maxbytes '10MB'
@@ -213,7 +218,7 @@ supervisor_service "#{namespace}.celery_worker" do
   stopwaitsecs 10
   stopasgroup false
   killasgroup false
-  user node[id]['user']
+  user h.instance_user
   redirect_stderr false
   stdout_logfile ::File.join(logs_dir, 'celery_worker-stdout.log')
   stdout_logfile_maxbytes '10MB'
@@ -249,7 +254,7 @@ supervisor_service "#{namespace}.celery_beat" do
   stopwaitsecs 10
   stopasgroup false
   killasgroup false
-  user node[id]['user']
+  user h.instance_user
   redirect_stderr false
   stdout_logfile ::File.join(logs_dir, 'celery_beat-stdout.log')
   stdout_logfile_maxbytes '10MB'
@@ -283,8 +288,8 @@ cleanup_script = ::File.join(node[id]['basedir'], 'cleanup_sentry')
 
 template cleanup_script do
   source 'cleanup_sentry.sh.erb'
-  owner node[id]['user']
-  group node[id]['group']
+  owner h.instance_user
+  group h.instance_group
   mode 0775
   variables(
     virtualenv_path: virtualenv_path,

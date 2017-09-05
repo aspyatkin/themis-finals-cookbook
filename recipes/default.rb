@@ -1,12 +1,12 @@
 id = 'themis-finals'
+h = ::ChefCookbook::Instance::Helper.new(node)
 
-include_recipe "#{id}::prerequisite_ruby"
-
+include_recipe "themis-finals-utils::install_ruby"
 include_recipe "#{id}::prerequisite_postgres"
 
 directory node[id]['basedir'] do
-  owner node[id]['user']
-  group node[id]['group']
+  owner h.instance_user
+  group h.instance_group
   mode 0755
   recursive true
   action :create
@@ -15,8 +15,8 @@ end
 logs_basedir = ::File.join(node[id]['basedir'], 'logs')
 
 directory logs_basedir do
-  owner node[id]['user']
-  group node[id]['group']
+  owner h.instance_user
+  group h.instance_group
   mode 0755
   recursive true
   action :create
@@ -25,8 +25,8 @@ end
 team_logo_dir = ::File.join(node[id]['basedir'], 'team_logo')
 
 directory team_logo_dir do
-  owner node[id]['user']
-  group node[id]['group']
+  owner h.instance_user
+  group h.instance_group
   mode 0755
   recursive true
   action :create
@@ -39,8 +39,8 @@ unless customize_cookbook.nil?
     cookbook_file full_path do
       cookbook customize_cookbook
       source name_
-      owner node[id]['user']
-      group node[id]['group']
+      owner h.instance_user
+      group h.instance_group
       mode 0644
       action :create
     end
@@ -62,16 +62,6 @@ all_programs = [
     "#{namespace}.server"
 ]
 
-enable_livetunnel = \
-  node[id].fetch('live', {}).fetch('enable', false) &&
-  !node[id].fetch('live', {}).fetch('server_username', nil).nil? &&
-  !node[id].fetch('live', {}).fetch('server_hostname', nil).nil? &&
-  !node[id].fetch('live', {}).fetch('remote_port', nil).nil?
-
-if enable_livetunnel
-  all_programs << "#{namespace}.livetunnel"
-end
-
 supervisor_group namespace do
   programs all_programs
   action :enable
@@ -81,8 +71,8 @@ cleanup_script = ::File.join(node[id]['basedir'], 'cleanup_logs')
 
 template cleanup_script do
   source 'cleanup_logs.sh.erb'
-  owner node[id]['user']
-  group node[id]['group']
+  owner h.instance_user
+  group h.instance_group
   mode 0775
   variables(
     logs_basedir: logs_basedir,
@@ -94,8 +84,8 @@ archive_script = ::File.join(node[id]['basedir'], 'archive_logs')
 
 template archive_script do
   source 'archive_logs.sh.erb'
-  owner node[id]['user']
-  group node[id]['group']
+  owner h.instance_user
+  group h.instance_group
   mode 0775
   variables(
     logs_basedir: logs_basedir,

@@ -1,19 +1,20 @@
 require 'json'
 id = 'themis-finals'
+h = ::ChefCookbook::Instance::Helper.new(node)
 
 basedir = ::File.join(node[id]['basedir'], 'stream')
 url_repository = "https://github.com/#{node[id]['stream']['github_repository']}"
 
 directory basedir do
-  owner node[id]['user']
-  group node[id]['group']
+  owner h.instance_user
+  group h.instance_group
   mode 0755
   recursive true
   action :create
 end
 
 if node.chef_environment.start_with?('development')
-  ssh_private_key node[id]['user']
+  ssh_private_key h.instance_user
   ssh_known_hosts_entry 'github.com'
   url_repository = "git@github.com:#{node[id]['stream']['github_repository']}.git"
 end
@@ -21,8 +22,8 @@ end
 git2 basedir do
   url url_repository
   branch node[id]['stream']['revision']
-  user node[id]['user']
-  group node[id]['group']
+  user h.instance_user
+  group h.instance_group
   action :create
 end
 
@@ -42,14 +43,14 @@ if node.chef_environment.start_with?('development')
       value value
       scope 'local'
       path basedir
-      user node[id]['user']
+      user h.instance_user
       action :set
     end
   end
 end
 
 yarn_install basedir do
-  user node[id]['user']
+  user h.instance_user
   action :run
 end
 
@@ -57,7 +58,7 @@ logs_basedir = ::File.join(node[id]['basedir'], 'logs')
 
 yarn_run "Build scripts at #{basedir}" do
   script 'build'
-  user node[id]['user']
+  user h.instance_user
   dir basedir
   action :run
 end
@@ -72,8 +73,8 @@ config = {
 config_file = ::File.join(basedir, 'config.json')
 
 file config_file do
-  owner node[id]['user']
-  group node[id]['group']
+  owner h.instance_user
+  group h.instance_group
   mode 0644
   content ::JSON.pretty_generate(config)
   action :create
@@ -94,7 +95,7 @@ supervisor_service "#{node[id]['supervisor_namespace']}.master.stream" do
   stopwaitsecs 10
   stopasgroup false
   killasgroup false
-  user node[id]['user']
+  user h.instance_user
   redirect_stderr false
   stdout_logfile ::File.join(logs_basedir, 'stream-%(process_num)s-stdout.log')
   stdout_logfile_maxbytes '10MB'

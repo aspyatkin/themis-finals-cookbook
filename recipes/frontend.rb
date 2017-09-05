@@ -1,18 +1,19 @@
 id = 'themis-finals'
+h = ::ChefCookbook::Instance::Helper.new(node)
 
 basedir = ::File.join(node[id]['basedir'], 'frontend')
 url_repository = "https://github.com/#{node[id]['frontend']['github_repository']}"
 
 directory basedir do
-  owner node[id]['user']
-  group node[id]['group']
+  owner h.instance_user
+  group h.instance_group
   mode 0755
   recursive true
   action :create
 end
 
 if node.chef_environment.start_with?('development')
-  ssh_private_key node[id]['user']
+  ssh_private_key h.instance_user
   ssh_known_hosts_entry 'github.com'
   url_repository = "git@github.com:#{node[id]['frontend']['github_repository']}.git"
 end
@@ -20,8 +21,8 @@ end
 git2 basedir do
   url url_repository
   branch node[id]['frontend']['revision']
-  user node[id]['user']
-  group node[id]['group']
+  user h.instance_user
+  group h.instance_group
   action :create
 end
 
@@ -41,14 +42,14 @@ if node.chef_environment.start_with?('development')
       value value
       scope 'local'
       path basedir
-      user node[id]['user']
+      user h.instance_user
       action :set
     end
   end
 end
 
 yarn_install basedir do
-  user node[id]['user']
+  user h.instance_user
   action :run
 end
 
@@ -58,16 +59,16 @@ if customize_cookbook.nil? || frontend_customize_module.nil?
   execute "Copy customization file at #{basedir}" do
     command 'cp customize.example.js customize.js'
     cwd basedir
-    user node[id]['user']
-    group node[id]['group']
+    user h.instance_user
+    group h.instance_group
     not_if "test -e #{basedir}/customize.js"
   end
 else
   cookbook_file ::File.join(basedir, 'customize.js') do
     cookbook customize_cookbook
     source frontend_customize_module
-    owner node[id]['user']
-    group node[id]['group']
+    owner h.instance_user
+    group h.instance_group
     mode 0644
     action :create
   end
@@ -79,8 +80,8 @@ unless customize_cookbook.nil?
     cookbook_file full_path do
       cookbook customize_cookbook
       source name_
-      owner node[id]['user']
-      group node[id]['group']
+      owner h.instance_user
+      group h.instance_group
       mode 0644
       action :create
     end
@@ -89,7 +90,7 @@ end
 
 yarn_run "Build scripts at #{basedir}" do
   script 'build'
-  user node[id]['user']
+  user h.instance_user
   dir basedir
   production node.chef_environment.start_with?('production')
   action :run

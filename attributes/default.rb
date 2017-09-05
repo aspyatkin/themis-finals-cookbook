@@ -1,11 +1,5 @@
 id = 'themis-finals'
 
-default[id]['user'] = 'vagrant'
-default[id]['group'] = 'vagrant'
-
-default[id]['ruby']['version'] = '2.4.1'
-default[id]['bundler_version'] = '1.14.6'
-
 default[id]['postgres']['version'] = '9.5'
 default[id]['postgres']['dbname'] = 'themis-finals'
 default[id]['postgres']['username'] = 'themis_finals_user'
