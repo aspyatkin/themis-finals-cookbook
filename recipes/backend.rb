@@ -50,7 +50,7 @@ end
 
 rbenv_execute "Install dependencies at #{basedir}" do
   command 'bundle'
-  ruby_version node[id]['ruby']['version']
+  ruby_version node['themis-finals-utils']['ruby']['version']
   cwd basedir
   user h.instance_user
   group h.instance_group
@@ -94,7 +94,8 @@ template dotenv_file do
   action :create
 end
 
-dump_db_script = ::File.join(node[id]['basedir'], 'dump_main_db')
+script_dir = ::File.join(node[id]['basedir'], 'script')
+dump_db_script = ::File.join(script_dir, 'dump_main_db')
 
 template dump_db_script do
   source 'dump_db.sh.erb'
@@ -110,9 +111,9 @@ template dump_db_script do
   )
 end
 
-logs_basedir = ::File.join(node[id]['basedir'], 'logs')
+namespace = "#{node[id]['supervisor_namespace']}.master"
 
-supervisor_service "#{node[id]['supervisor_namespace']}.master.queue" do
+supervisor_service "#{namespace}.queue" do
   command 'sh script/queue'
   process_name 'queue-%(process_num)s'
   numprocs node[id]['backend']['queue']['processes']
@@ -129,12 +130,12 @@ supervisor_service "#{node[id]['supervisor_namespace']}.master.queue" do
   killasgroup true
   user h.instance_user
   redirect_stderr false
-  stdout_logfile ::File.join(logs_basedir, 'queue-%(process_num)s-stdout.log')
+  stdout_logfile ::File.join(node['supervisor']['log_dir'], "#{namespace}.queue-%(process_num)s-stdout.log")
   stdout_logfile_maxbytes '10MB'
   stdout_logfile_backups 10
   stdout_capture_maxbytes '0'
   stdout_events_enabled false
-  stderr_logfile ::File.join(logs_basedir, 'queue-%(process_num)s-stderr.log')
+  stderr_logfile ::File.join(node['supervisor']['log_dir'], "#{namespace}.queue-%(process_num)s-stderr.log")
   stderr_logfile_maxbytes '10MB'
   stderr_logfile_backups 10
   stderr_capture_maxbytes '0'
@@ -168,7 +169,33 @@ supervisor_service "#{node[id]['supervisor_namespace']}.master.queue" do
   action :enable
 end
 
-supervisor_service "#{node[id]['supervisor_namespace']}.master.scheduler" do
+template ::File.join(script_dir, 'tail-queue-stdout') do
+  source 'tail.sh.erb'
+  owner h.instance_user
+  group h.instance_group
+  mode 0755
+  variables(
+    files: ::Range.new(0, node[id]['backend']['queue']['processes'], true).map do |ndx|
+      ::File.join(node['supervisor']['log_dir'], "#{namespace}.queue-#{ndx}-stdout.log")
+    end
+  )
+  action :create
+end
+
+template ::File.join(script_dir, 'tail-queue-stderr') do
+  source 'tail.sh.erb'
+  owner h.instance_user
+  group h.instance_group
+  mode 0755
+  variables(
+    files: ::Range.new(0, node[id]['backend']['queue']['processes'], true).map do |ndx|
+      ::File.join(node['supervisor']['log_dir'], "#{namespace}.queue-#{ndx}-stderr.log")
+    end
+  )
+  action :create
+end
+
+supervisor_service "#{namespace}.scheduler" do
   command 'sh script/scheduler'
   process_name 'scheduler'
   numprocs 1
@@ -185,12 +212,12 @@ supervisor_service "#{node[id]['supervisor_namespace']}.master.scheduler" do
   killasgroup true
   user h.instance_user
   redirect_stderr false
-  stdout_logfile ::File.join(logs_basedir, 'scheduler-stdout.log')
+  stdout_logfile ::File.join(node['supervisor']['log_dir'], "#{namespace}.scheduler-stdout.log")
   stdout_logfile_maxbytes '10MB'
   stdout_logfile_backups 10
   stdout_capture_maxbytes '0'
   stdout_events_enabled false
-  stderr_logfile ::File.join(logs_basedir, 'scheduler-stderr.log')
+  stderr_logfile ::File.join(node['supervisor']['log_dir'], "#{namespace}.scheduler-stderr.log")
   stderr_logfile_maxbytes '10MB'
   stderr_logfile_backups 10
   stderr_capture_maxbytes '0'
@@ -216,9 +243,35 @@ supervisor_service "#{node[id]['supervisor_namespace']}.master.scheduler" do
   action :enable
 end
 
+template ::File.join(script_dir, 'tail-scheduler-stdout') do
+  source 'tail.sh.erb'
+  owner h.instance_user
+  group h.instance_group
+  mode 0755
+  variables(
+    files: [
+      ::File.join(node['supervisor']['log_dir'], "#{namespace}.scheduler-stdout.log")
+    ]
+  )
+  action :create
+end
+
+template ::File.join(script_dir, 'tail-scheduler-stderr') do
+  source 'tail.sh.erb'
+  owner h.instance_user
+  group h.instance_group
+  mode 0755
+  variables(
+    files: [
+      ::File.join(node['supervisor']['log_dir'], "#{namespace}.scheduler-stderr.log")
+    ]
+  )
+  action :create
+end
+
 team_logo_dir = ::File.join(node[id]['basedir'], 'team_logo')
 
-supervisor_service "#{node[id]['supervisor_namespace']}.master.server" do
+supervisor_service "#{namespace}.server" do
   command 'sh script/server'
   process_name 'server-%(process_num)s'
   numprocs node[id]['backend']['server']['processes']
@@ -235,12 +288,12 @@ supervisor_service "#{node[id]['supervisor_namespace']}.master.server" do
   killasgroup true
   user h.instance_user
   redirect_stderr false
-  stdout_logfile ::File.join(logs_basedir, 'server-%(process_num)s-stdout.log')
+  stdout_logfile ::File.join(node['supervisor']['log_dir'], "#{namespace}.server-%(process_num)s-stdout.log")
   stdout_logfile_maxbytes '10MB'
   stdout_logfile_backups 10
   stdout_capture_maxbytes '0'
   stdout_events_enabled false
-  stderr_logfile ::File.join(logs_basedir, 'server-%(process_num)s-stderr.log')
+  stderr_logfile ::File.join(node['supervisor']['log_dir'], "#{namespace}.server-%(process_num)s-stderr.log")
   stderr_logfile_maxbytes '10MB'
   stderr_logfile_backups 10
   stderr_capture_maxbytes '0'
@@ -274,3 +327,30 @@ supervisor_service "#{node[id]['supervisor_namespace']}.master.server" do
   serverurl 'AUTO'
   action :enable
 end
+
+template ::File.join(script_dir, 'tail-server-stdout') do
+  source 'tail.sh.erb'
+  owner h.instance_user
+  group h.instance_group
+  mode 0755
+  variables(
+    files: ::Range.new(0, node[id]['backend']['server']['processes'], true).map do |ndx|
+      ::File.join(node['supervisor']['log_dir'], "#{namespace}.server-#{ndx}-stdout.log")
+    end
+  )
+  action :create
+end
+
+template ::File.join(script_dir, 'tail-server-stderr') do
+  source 'tail.sh.erb'
+  owner h.instance_user
+  group h.instance_group
+  mode 0755
+  variables(
+    files: ::Range.new(0, node[id]['backend']['server']['processes'], true).map do |ndx|
+      ::File.join(node['supervisor']['log_dir'], "#{namespace}.server-#{ndx}-stderr.log")
+    end
+  )
+  action :create
+end
+

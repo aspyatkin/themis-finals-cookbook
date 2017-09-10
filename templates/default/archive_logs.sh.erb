@@ -1,2 +1,2 @@
 #!/usr/bin/env sh
-tar -zcvf $1 <%= @logs_basedir %>/*.log <%= @sentry_logs_basedir %>/*.log
+sudo tar -zcvf $1 <%= @dirs.map { |dir| "#{dir}/*.log" }.join(' ') %>

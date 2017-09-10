@@ -1,6 +1,6 @@
 name 'themis-finals'
 description 'Installs and configures Themis Finals'
-version '1.5.0'
+version '1.6.0'
 
 recipe 'themis-finals', 'Installs and configures Themis Finals'
 depends 'git', '~> 8.0.0'
@@ -23,3 +23,4 @@ depends 'instance', '~> 1.0.0'
 depends 'themis-finals-customize-default', '~> 1.0.0'
 depends 'themis-finals-customize-volgactf-2016-finals', '~> 1.0.0'
 depends 'themis-finals-customize-rcc-2017', '~> 1.0.0'
+depends 'themis-finals-customize-volgactf-2017-finals', '~> 1.0.0'

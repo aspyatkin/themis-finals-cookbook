@@ -12,10 +12,10 @@ upstream stream {
 
 server {
   listen 80;
-  server_name <%= @server_name %><% unless @live_server_name.nil? %><%= " #{@live_server_name}" %><% end %>;
+  server_name <%= @fqdn_list.join(' ') %>;
 
-  access_log <%= @logs_basedir %>/nginx_access.log;
-  error_log <%= @logs_basedir %>/nginx_error.log;
+  access_log <%= @access_log %> combined;
+  error_log <%= @error_log %> <%= @debug ? 'debug' : 'error' %>;
 
   keepalive_timeout 100;
   charset utf-8;

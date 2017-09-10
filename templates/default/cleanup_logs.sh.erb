@@ -1,3 +1,4 @@
 #!/usr/bin/env sh
-rm -vf <%= @logs_basedir %>/*.log
-rm -vf <%= @sentry_logs_basedir %>/*.log
+<% @dirs.each do |dir| %>
+sudo rm -vf <%= dir %>/*.log
+<% end %>

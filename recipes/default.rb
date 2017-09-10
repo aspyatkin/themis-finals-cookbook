@@ -12,9 +12,9 @@ directory node[id]['basedir'] do
   action :create
 end
 
-logs_basedir = ::File.join(node[id]['basedir'], 'logs')
+script_dir = ::File.join(node[id]['basedir'], 'script')
 
-directory logs_basedir do
+directory script_dir do
   owner h.instance_user
   group h.instance_group
   mode 0755
@@ -67,7 +67,7 @@ supervisor_group namespace do
   action :enable
 end
 
-cleanup_script = ::File.join(node[id]['basedir'], 'cleanup_logs')
+cleanup_script = ::File.join(script_dir, 'cleanup_logs')
 
 template cleanup_script do
   source 'cleanup_logs.sh.erb'
@@ -75,12 +75,14 @@ template cleanup_script do
   group h.instance_group
   mode 0775
   variables(
-    logs_basedir: logs_basedir,
-    sentry_logs_basedir: ::File.join(node[id]['basedir'], 'sentry', 'logs')
+    dirs: [
+      node['nginx']['log_dir'],
+      node['supervisor']['log_dir']
+    ]
   )
 end
 
-archive_script = ::File.join(node[id]['basedir'], 'archive_logs')
+archive_script = ::File.join(script_dir, 'archive_logs')
 
 template archive_script do
   source 'archive_logs.sh.erb'
@@ -88,17 +90,22 @@ template archive_script do
   group h.instance_group
   mode 0775
   variables(
-    logs_basedir: logs_basedir,
-    sentry_logs_basedir: ::File.join(node[id]['basedir'], 'sentry', 'logs')
+    dirs: [
+      node['nginx']['log_dir'],
+      node['supervisor']['log_dir']
+    ]
   )
 end
+
+fqdn_list = [node[id]['fqdn']].concat(node[id]['extra_fqdn'])
 
 nginx_site 'themis-finals' do
   template 'nginx.conf.erb'
   variables(
-    server_name: node[id]['fqdn'],
-    live_server_name: node[id].fetch('live', {}).fetch('fqdn', nil),
-    logs_basedir: logs_basedir,
+    fqdn_list: fqdn_list,
+    debug: node[id]['debug'],
+    access_log: ::File.join(node['nginx']['log_dir'], "themis-finals_access.log"),
+    error_log: ::File.join(node['nginx']['log_dir'], "themis-finals_error.log"),
     frontend_basedir: ::File.join(node[id]['basedir'], 'frontend'),
     visualization_basedir: node[id]['basedir'],
     backend_server_processes: node[id]['backend']['server']['processes'],

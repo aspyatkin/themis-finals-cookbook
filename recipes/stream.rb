@@ -54,8 +54,6 @@ yarn_install basedir do
   action :run
 end
 
-logs_basedir = ::File.join(node[id]['basedir'], 'logs')
-
 yarn_run "Build scripts at #{basedir}" do
   script 'build'
   user h.instance_user
@@ -80,7 +78,9 @@ file config_file do
   action :create
 end
 
-supervisor_service "#{node[id]['supervisor_namespace']}.master.stream" do
+namespace = "#{node[id]['supervisor_namespace']}.master"
+
+supervisor_service "#{namespace}.stream" do
   command 'node ./dist/server.js'
   process_name 'stream-%(process_num)s'
   numprocs node[id]['stream']['processes']
@@ -97,12 +97,12 @@ supervisor_service "#{node[id]['supervisor_namespace']}.master.stream" do
   killasgroup false
   user h.instance_user
   redirect_stderr false
-  stdout_logfile ::File.join(logs_basedir, 'stream-%(process_num)s-stdout.log')
+  stdout_logfile ::File.join(node['supervisor']['log_dir'], "#{namespace}.stream-%(process_num)s-stdout.log")
   stdout_logfile_maxbytes '10MB'
   stdout_logfile_backups 10
   stdout_capture_maxbytes '0'
   stdout_events_enabled false
-  stderr_logfile ::File.join(logs_basedir, 'stream-%(process_num)s-stderr.log')
+  stderr_logfile ::File.join(node['supervisor']['log_dir'], "#{namespace}.stream-%(process_num)s-stderr.log")
   stderr_logfile_maxbytes '10MB'
   stderr_logfile_backups 10
   stderr_capture_maxbytes '0'
@@ -125,4 +125,32 @@ supervisor_service "#{node[id]['supervisor_namespace']}.master.stream" do
   directory basedir
   serverurl 'AUTO'
   action :enable
+end
+
+script_dir = ::File.join(node[id]['basedir'], 'script')
+
+template ::File.join(script_dir, 'tail-stream-stdout') do
+  source 'tail.sh.erb'
+  owner h.instance_user
+  group h.instance_group
+  mode 0755
+  variables(
+    files: ::Range.new(0, node[id]['stream']['processes'], true).map do |ndx|
+      ::File.join(node['supervisor']['log_dir'], "#{namespace}.stream-#{ndx}-stdout.log")
+    end
+  )
+  action :create
+end
+
+template ::File.join(script_dir, 'tail-stream-stderr') do
+  source 'tail.sh.erb'
+  owner h.instance_user
+  group h.instance_group
+  mode 0755
+  variables(
+    files: ::Range.new(0, node[id]['stream']['processes'], true).map do |ndx|
+      ::File.join(node['supervisor']['log_dir'], "#{namespace}.stream-#{ndx}-stderr.log")
+    end
+  )
+  action :create
 end

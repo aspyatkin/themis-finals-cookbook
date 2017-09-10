@@ -1,5 +1,8 @@
 id = 'themis-finals'
 
+default[id]['fqdn'] = nil
+default[id]['extra_fqdn'] = []
+
 default[id]['postgres']['version'] = '9.5'
 default[id]['postgres']['dbname'] = 'themis-finals'
 default[id]['postgres']['username'] = 'themis_finals_user'

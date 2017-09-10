@@ -19,15 +19,6 @@ directory basedir do
   action :create
 end
 
-logs_dir = ::File.join(basedir, 'logs')
-
-directory logs_dir do
-  owner h.instance_user
-  group h.instance_group
-  mode 0755
-  action :create
-end
-
 virtualenv_path = ::File.join(basedir, '.venv')
 
 python_virtualenv virtualenv_path do
@@ -76,7 +67,8 @@ postgresql_database_user node[id]['sentry']['postgres']['username'] do
   action [:create, :grant]
 end
 
-dump_db_script = ::File.join(node[id]['basedir'], 'dump_sentry_db')
+script_dir = ::File.join(node[id]['basedir'], 'script')
+dump_db_script = ::File.join(script_dir, 'dump_sentry_db')
 
 template dump_db_script do
   source 'dump_db.sh.erb'
@@ -184,12 +176,12 @@ supervisor_service "#{namespace}.web" do
   killasgroup false
   user h.instance_user
   redirect_stderr false
-  stdout_logfile ::File.join(logs_dir, 'web-stdout.log')
+  stdout_logfile ::File.join(node['supervisor']['log_dir'], "#{namespace}.web-stdout.log")
   stdout_logfile_maxbytes '10MB'
   stdout_logfile_backups 10
   stdout_capture_maxbytes '0'
   stdout_events_enabled false
-  stderr_logfile ::File.join(logs_dir, 'web-stderr.log')
+  stderr_logfile ::File.join(node['supervisor']['log_dir'], "#{namespace}.web-stderr.log")
   stderr_logfile_maxbytes '10MB'
   stderr_logfile_backups 10
   stderr_capture_maxbytes '0'
@@ -220,12 +212,12 @@ supervisor_service "#{namespace}.celery_worker" do
   killasgroup false
   user h.instance_user
   redirect_stderr false
-  stdout_logfile ::File.join(logs_dir, 'celery_worker-stdout.log')
+  stdout_logfile ::File.join(node['supervisor']['log_dir'], "#{namespace}.celery_worker-stdout.log")
   stdout_logfile_maxbytes '10MB'
   stdout_logfile_backups 10
   stdout_capture_maxbytes '0'
   stdout_events_enabled false
-  stderr_logfile ::File.join(logs_dir, 'celery_worker-stderr.log')
+  stderr_logfile ::File.join(node['supervisor']['log_dir'], "#{namespace}.celery_worker-stderr.log")
   stderr_logfile_maxbytes '10MB'
   stderr_logfile_backups 10
   stderr_capture_maxbytes '0'
@@ -256,12 +248,12 @@ supervisor_service "#{namespace}.celery_beat" do
   killasgroup false
   user h.instance_user
   redirect_stderr false
-  stdout_logfile ::File.join(logs_dir, 'celery_beat-stdout.log')
+  stdout_logfile ::File.join(node['supervisor']['log_dir'], "#{namespace}.celery_beat-stdout.log")
   stdout_logfile_maxbytes '10MB'
   stdout_logfile_backups 10
   stdout_capture_maxbytes '0'
   stdout_events_enabled false
-  stderr_logfile ::File.join(logs_dir, 'celery_beat-stderr.log')
+  stderr_logfile ::File.join(node['supervisor']['log_dir'], "#{namespace}.celery_beat-stderr.log")
   stderr_logfile_maxbytes '10MB'
   stderr_logfile_backups 10
   stderr_capture_maxbytes '0'
@@ -284,7 +276,7 @@ supervisor_group namespace do
   action [:enable, :start]
 end
 
-cleanup_script = ::File.join(node[id]['basedir'], 'cleanup_sentry')
+cleanup_script = ::File.join(script_dir, 'cleanup_sentry')
 
 template cleanup_script do
   source 'cleanup_sentry.sh.erb'
