@@ -1,20 +1,21 @@
 require 'json'
 id = 'themis-finals'
-h = ::ChefCookbook::Instance::Helper.new(node)
+instance = ::ChefCookbook::Instance::Helper.new(node)
+secret = ::ChefCookbook::Secret::Helper.new(node)
 
 basedir = ::File.join(node[id]['basedir'], 'stream')
 url_repository = "https://github.com/#{node[id]['stream']['github_repository']}"
 
 directory basedir do
-  owner h.instance_user
-  group h.instance_group
+  owner instance.user
+  group instance.group
   mode 0755
   recursive true
   action :create
 end
 
 if node.chef_environment.start_with?('development')
-  ssh_private_key h.instance_user
+  ssh_private_key instance.user
   ssh_known_hosts_entry 'github.com'
   url_repository = "git@github.com:#{node[id]['stream']['github_repository']}.git"
 end
@@ -22,8 +23,8 @@ end
 git2 basedir do
   url url_repository
   branch node[id]['stream']['revision']
-  user h.instance_user
-  group h.instance_group
+  user instance.user
+  group instance.group
   action :create
 end
 
@@ -43,20 +44,20 @@ if node.chef_environment.start_with?('development')
       value value
       scope 'local'
       path basedir
-      user h.instance_user
+      user instance.user
       action :set
     end
   end
 end
 
 yarn_install basedir do
-  user h.instance_user
+  user instance.user
   action :run
 end
 
 yarn_run "Build scripts at #{basedir}" do
   script 'build'
-  user h.instance_user
+  user instance.user
   dir basedir
   action :run
 end
@@ -71,11 +72,24 @@ config = {
 config_file = ::File.join(basedir, 'config.json')
 
 file config_file do
-  owner h.instance_user
-  group h.instance_group
+  owner instance.user
+  group instance.group
   mode 0644
   content ::JSON.pretty_generate(config)
   action :create
+end
+
+redis_host = nil
+redis_port = nil
+postgres_host = nil
+postgres_port = nil
+
+ruby_block 'obtain redis & postgres settings' do
+  block do
+    postgres_host, postgres_port = ::ChefCookbook::LocalDNS::resolve_service('postgres', 'tcp', node['themis']['finals']['ns'])
+    redis_host, redis_port = ::ChefCookbook::LocalDNS::resolve_service('redis', 'tcp', node['themis']['finals']['ns'])
+  end
+  action :run
 end
 
 namespace = "#{node[id]['supervisor_namespace']}.master"
@@ -95,7 +109,7 @@ supervisor_service "#{namespace}.stream" do
   stopwaitsecs 10
   stopasgroup false
   killasgroup false
-  user h.instance_user
+  user instance.user
   redirect_stderr false
   stdout_logfile ::File.join(node['supervisor']['log_dir'], "#{namespace}.stream-%(process_num)s-stdout.log")
   stdout_logfile_maxbytes '10MB'
@@ -107,21 +121,24 @@ supervisor_service "#{namespace}.stream" do
   stderr_logfile_backups 10
   stderr_capture_maxbytes '0'
   stderr_events_enabled false
-  environment(
-    'HOST' => '127.0.0.1',
-    'PORT' => node[id]['stream']['port_range_start'],
-    'INSTANCE' => '%(process_num)s',
-    'LOG_LEVEL' => node[id]['debug'] ? 'debug' : 'info',
-    'REDIS_HOST' => node['latest-redis']['listen']['address'],
-    'REDIS_PORT' => node['latest-redis']['listen']['port'],
-    'PG_HOST' => node[id]['postgres']['host'],
-    'PG_PORT' => node[id]['postgres']['port'],
-    'PG_USERNAME' => node[id]['postgres']['username'],
-    'PG_PASSWORD' => data_bag_item('postgres', node.chef_environment)['credentials'][node[id]['postgres']['username']],
-    'PG_DATABASE' => node[id]['postgres']['dbname'],
-    'THEMIS_FINALS_STREAM_REDIS_DB' => node[id]['stream']['redis_db'],
-    'THEMIS_FINALS_STREAM_REDIS_CHANNEL_NAMESPACE' => node[id]['stream']['redis_channel_namespace']
-  )
+  environment lazy {
+    {
+      'HOST' => '127.0.0.1',
+      'PORT' => node[id]['stream']['port_range_start'],
+      'INSTANCE' => '%(process_num)s',
+      'LOG_LEVEL' => node[id]['debug'] ? 'debug' : 'info',
+      'REDIS_HOST' => redis_host,
+      'REDIS_PORT' => redis_port,
+      'REDIS_PASSWORD' => secret.get('redis:password', required: false, default: nil),
+      'PG_HOST' => postgres_host,
+      'PG_PORT' => postgres_port,
+      'PG_USERNAME' => node[id]['postgres']['username'],
+      'PG_PASSWORD' => secret.get("postgres:password:#{node[id]['postgres']['username']}"),
+      'PG_DATABASE' => node[id]['postgres']['dbname'],
+      'THEMIS_FINALS_STREAM_REDIS_DB' => node[id]['stream']['redis_db'],
+      'THEMIS_FINALS_STREAM_REDIS_CHANNEL_NAMESPACE' => node[id]['stream']['redis_channel_namespace']
+    }
+  }
   directory basedir
   serverurl 'AUTO'
   action :enable
@@ -131,8 +148,8 @@ script_dir = ::File.join(node[id]['basedir'], 'script')
 
 template ::File.join(script_dir, 'tail-stream-stdout') do
   source 'tail.sh.erb'
-  owner h.instance_user
-  group h.instance_group
+  owner instance.user
+  group instance.group
   mode 0755
   variables(
     files: ::Range.new(0, node[id]['stream']['processes'], true).map do |ndx|
@@ -144,8 +161,8 @@ end
 
 template ::File.join(script_dir, 'tail-stream-stderr') do
   source 'tail.sh.erb'
-  owner h.instance_user
-  group h.instance_group
+  owner instance.user
+  group instance.group
   mode 0755
   variables(
     files: ::Range.new(0, node[id]['stream']['processes'], true).map do |ndx|

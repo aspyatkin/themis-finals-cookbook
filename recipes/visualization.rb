@@ -1,19 +1,19 @@
 id = 'themis-finals'
-h = ::ChefCookbook::Instance::Helper.new(node)
+instance = ::ChefCookbook::Instance::Helper.new(node)
 
 basedir = ::File.join(node[id]['basedir'], 'visualization')
 url_repository = "https://github.com/#{node[id]['visualization']['github_repository']}"
 
 directory basedir do
-  owner h.instance_user
-  group h.instance_group
+  owner instance.user
+  group instance.group
   mode 0755
   recursive true
   action :create
 end
 
 if node.chef_environment.start_with?('development')
-  ssh_private_key h.instance_user
+  ssh_private_key instance.user
   ssh_known_hosts_entry 'github.com'
   url_repository = "git@github.com:#{node[id]['visualization']['github_repository']}.git"
 end
@@ -21,8 +21,8 @@ end
 git2 basedir do
   url url_repository
   branch node[id]['visualization']['revision']
-  user h.instance_user
-  group h.instance_group
+  user instance.user
+  group instance.group
   action :create
 end
 
@@ -42,7 +42,7 @@ if node.chef_environment.start_with?('development')
       value value
       scope 'local'
       path basedir
-      user h.instance_user
+      user instance.user
       action :set
     end
   end

@@ -1,0 +1,9 @@
+geo $themis_finals_identity {
+  default 0;
+  <% @team_networks.each_with_index do |network, ndx| %>
+  <%= network %> <%= ndx +1 %>;
+  <% end %>
+}
+
+limit_req_zone $themis_finals_identity zone=themis_finals_flag_info:10m rate=<%= @flag_info_req_limit_rate %>;
+limit_req_zone $themis_finals_identity zone=themis_finals_flag_submit:10m rate=<%= @flag_submit_req_limit_rate %>;

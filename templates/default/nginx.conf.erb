@@ -10,6 +10,8 @@ upstream stream {
   <% end %>
 }
 
+js_include <%= @flag_js_nginx %>;
+
 server {
   listen 80;
   server_name <%= @fqdn_list.join(' ') %>;
@@ -29,11 +31,14 @@ server {
     root <%= @frontend_basedir %>/build;
   }
 
-  location /api/checker/v1/ {
+  location /api/checker/v2/ {
     <% @internal_networks.each do |network| %>
     allow <%= network %>;
     <% end %>
     deny all;
+
+    auth_basic "Restricted";
+    auth_basic_user_file <%= @htpasswd %>;
 
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
@@ -71,6 +76,88 @@ server {
     client_max_body_size 1k;
   }
 
+  location /api/flag/v1/submit {
+    if ($themis_finals_identity = 0) {
+      return 403;
+    }
+
+    limit_req_status 429;
+    limit_req zone=themis_finals_flag_submit<% if @flag_submit_req_limit_burst > 0 %> burst=<%= @flag_submit_req_limit_burst %><% if @flag_submit_req_limit_nodelay %> nodelay<% end %><% end %>;
+
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header Host $http_host;
+
+    proxy_pass http://backend_server;
+    proxy_redirect off;
+
+    proxy_http_version 1.1;
+    chunked_transfer_encoding off;
+    proxy_buffering off;
+    proxy_cache off;
+
+    client_max_body_size 33;
+
+    error_page 403 /flag_submit_403;
+    error_page 413 /flag_submit_413;
+    error_page 429 /flag_submit_429;
+  }
+
+  location = /flag_submit_403 {
+    internal;
+    js_content flag_submit_403;
+  }
+
+  location = /flag_submit_413 {
+    internal;
+    js_content flag_submit_413;
+  }
+
+  location = /flag_submit_429 {
+    internal;
+    js_content flag_submit_429;
+  }
+
+  location /api/flag/v1/info {
+    if ($themis_finals_identity = 0) {
+      return 403;
+    }
+
+    limit_req_status 429;
+    limit_req zone=themis_finals_flag_info<% if @flag_info_req_limit_burst > 0 %> burst=<%= @flag_info_req_limit_burst %><% if @flag_info_req_limit_nodelay %> nodelay<% end %><% end %>;
+
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header Host $http_host;
+
+    proxy_pass http://backend_server;
+    proxy_redirect off;
+
+    proxy_http_version 1.1;
+    chunked_transfer_encoding off;
+    proxy_buffering off;
+    proxy_cache off;
+
+    error_page 403 /flag_getinfo_403;
+    error_page 404 /flag_getinfo_404;
+    error_page 429 /flag_getinfo_429;
+  }
+
+  location = /flag_getinfo_403 {
+    internal;
+    js_content flag_getinfo_403;
+  }
+
+  location = /flag_getinfo_404 {
+    internal;
+    js_content flag_getinfo_404;
+  }
+
+  location = /flag_getinfo_429 {
+    internal;
+    js_content flag_getinfo_429;
+  }
+
   location /api/ {
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
@@ -103,8 +190,17 @@ server {
   }
 
   location /visualization {
+    <% @internal_networks.each do |network| %>
+    allow <%= network %>;
+    <% end %>
+    deny all;
+
     set $contest_title "<%= @contest_title %>";
     ssi on;
     root <%= @visualization_basedir %>;
+  }
+
+  location /media {
+    alias <%= @media_dir %>;
   }
 }
