@@ -1,5 +1,3 @@
-require './lib/configuration/init'
-
 module Themis
   module Finals
     module Configuration
@@ -7,13 +5,15 @@ module Themis
         internal <%= @internal_networks.map { |x| "'#{x}'"}.join(', ') %>
       end
 
-      contest_flow do
-        flag_lifetime <%= @contest['flag_lifetime'] %>
-        push_period <%= @contest['push_period'] %>
-        poll_period <%= @contest['poll_period'] %>
-        poll_count <%= @contest['poll_count'] %>
-        update_period <%= @contest['update_period'] %>
-        attack_limits <%= @contest['attack_limit']['attempts'] %>, <%= @contest['attack_limit']['time'] %>
+      settings do
+        flag_lifetime <%= @settings['flag_lifetime'] %>
+        round_timespan <%= @settings['round_timespan'] %>
+        poll_timespan <%= @settings['poll_timespan'] %>
+        poll_delay <%= @settings['poll_delay'] %>
+      end
+
+      deprecated_settings do
+        attack_limits <%= @deprecated_settings['attack_limit']['attempts'] %>, <%= @deprecated_settings['attack_limit']['time'] %>
       end
 
       <% @teams.each do |team_alias, team_data| %>
@@ -28,7 +28,8 @@ module Themis
       service '<%= service_alias %>' do
         name '<%= service_data['name'] %>'
         hostmask '<%= service_data['hostmask'] %>'
-        metadata push_url: '<%= service_data['metadata']['push_url'] %>', pull_url: '<%= service_data['metadata']['pull_url'] %>'
+        checker_endpoint '<%= service_data['checker_endpoint'] %>'
+        attack_priority <%= service_data.has_key?('attack_priority') ? service_data['attack_priority'].to_s : 'false' %>
       end
       <% end %>
     end

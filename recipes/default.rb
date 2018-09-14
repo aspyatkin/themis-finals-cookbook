@@ -1,6 +1,7 @@
 id = 'themis-finals'
 instance = ::ChefCookbook::Instance::Helper.new(node)
 secret = ::ChefCookbook::Secret::Helper.new(node)
+h = ::ChefCookbook::Themis::Finals::Helper.new(node)
 
 include_recipe "themis-finals-utils::install_ruby"
 include_recipe "#{id}::prerequisite_postgres"
@@ -13,9 +14,7 @@ directory node[id]['basedir'] do
   action :create
 end
 
-script_dir = ::File.join(node[id]['basedir'], 'script')
-
-directory script_dir do
+directory h.script_dir do
   owner instance.user
   group instance.group
   mode 0755
@@ -23,9 +22,7 @@ directory script_dir do
   action :create
 end
 
-media_dir = ::File.join(node[id]['basedir'], 'media')
-
-directory media_dir do
+directory h.media_dir do
   owner instance.user
   group instance.group
   mode 0755
@@ -33,9 +30,7 @@ directory media_dir do
   action :create
 end
 
-team_logo_dir = ::File.join(node[id]['basedir'], 'team_logo')
-
-directory team_logo_dir do
+directory h.team_logo_dir do
   owner instance.user
   group instance.group
   mode 0755
@@ -46,7 +41,7 @@ end
 customize_cookbook = node[id].fetch('customize_cookbook', nil)
 unless customize_cookbook.nil?
   node[id].fetch('team_logo_files', {}).each do |name_, path_path|
-    full_path = ::File.join(team_logo_dir, path_path)
+    full_path = ::File.join(h.team_logo_dir, path_path)
     cookbook_file full_path do
       cookbook customize_cookbook
       source name_
@@ -77,7 +72,7 @@ supervisor_group namespace do
   action :enable
 end
 
-cleanup_script = ::File.join(script_dir, 'cleanup_logs')
+cleanup_script = ::File.join(h.script_dir, 'cleanup_logs')
 
 template cleanup_script do
   source 'cleanup_logs.sh.erb'
@@ -92,7 +87,7 @@ template cleanup_script do
   )
 end
 
-archive_script = ::File.join(script_dir, 'archive_logs')
+archive_script = ::File.join(h.script_dir, 'archive_logs')
 
 template archive_script do
   source 'archive_logs.sh.erb'
@@ -149,9 +144,9 @@ nginx_site 'themis-finals' do
     debug: node[id]['debug'],
     access_log: ::File.join(node['nginx']['log_dir'], "themis-finals_access.log"),
     error_log: ::File.join(node['nginx']['log_dir'], "themis-finals_error.log"),
-    frontend_basedir: ::File.join(node[id]['basedir'], 'frontend'),
+    frontend_basedir: h.frontend_dir,
     visualization_basedir: node[id]['basedir'],
-    media_dir: media_dir,
+    media_dir: h.media_dir,
     backend_server_processes: node[id]['backend']['server']['processes'],
     backend_server_port_range_start: \
       node[id]['backend']['server']['port_range_start'],
@@ -160,7 +155,7 @@ nginx_site 'themis-finals' do
     internal_networks: node[id]['config']['internal_networks'],
     htpasswd: htpasswd_file,
     team_networks: node[id]['config']['teams'].values.map { |x| x['network'] },
-    contest_title: node[id]['config']['contest']['title'],
+    competition_title: node[id]['config']['competition']['title'],
     flag_info_req_limit_burst: node[id]['config']['api_req_limits']['flag_info']['burst'],
     flag_info_req_limit_nodelay: node[id]['config']['api_req_limits']['flag_info']['nodelay'],
     flag_submit_req_limit_burst: node[id]['config']['api_req_limits']['flag_submit']['burst'],
@@ -168,4 +163,48 @@ nginx_site 'themis-finals' do
     flag_js_nginx: flag_js_nginx
   )
   action :enable
+end
+
+template '/usr/local/bin/themis-final-cli' do
+  source 'themis-final-cli.sh.erb'
+  user instance.root
+  group node['root_group']
+  mode 0755
+  variables(
+    backend_dir: h.backend_dir
+  )
+  action :create
+end
+
+directory h.domain_dir do
+  owner instance.user
+  group instance.group
+  mode 0755
+  recursive true
+  action :create
+end
+
+node[id]['config']['domain_files'].each do |item|
+  domain_filename = ::File.join(h.domain_dir, "#{item['name']}.rb")
+  domain_vars = {
+    services: item['services']
+  }
+
+  if item['type'] == 'competition_init'
+    domain_vars.merge!({
+      internal_networks: node[id]['config']['internal_networks'],
+      settings: node[id]['config']['settings'],
+      deprecated_settings: node[id]['config']['deprecated_settings'],
+      teams: node[id]['config']['teams']
+    })
+  end
+
+  template domain_filename do
+    source "#{item['type']}.rb.erb"
+    user instance.user
+    group instance.group
+    mode 0644
+    variables domain_vars
+    action :create
+  end
 end

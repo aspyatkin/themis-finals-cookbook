@@ -1,0 +1,35 @@
+#!/usr/bin/env sh
+
+CUR_DIR=$PWD
+
+COMMAND=$1
+SUBCOMMAND=$2
+RAKE_OPTS="$COMMAND:$SUBCOMMAND"
+
+if [ "$COMMAND" = "competition" ] && [ "$SUBCOMMAND" = "init" ]; then
+    DOMAIN_FILE=`realpath $3`
+    RAKE_OPTS="$RAKE_OPTS[$DOMAIN_FILE]"
+fi
+
+if [ "$COMMAND" = "service" ] && [ "$SUBCOMMAND" = "init" ]; then
+    DOMAIN_FILE=`realpath $3`
+    RAKE_OPTS="$RAKE_OPTS[$DOMAIN_FILE]"
+fi
+
+if [ "$COMMAND" = "service" ] && [ "$SUBCOMMAND" = "disable" ]; then
+    ALIAS=$3
+    ROUND=$4
+    RAKE_OPTS="$RAKE_OPTS[$ALIAS,$ROUND]"
+fi
+
+if [ "$COMMAND" = "service" ] && [ "$SUBCOMMAND" = "enable" ]; then
+    ALIAS=$3
+    ROUND=$4
+    RAKE_OPTS="$RAKE_OPTS[$ALIAS,$ROUND]"
+fi
+
+cd <%= @backend_dir %>
+bundle exec rake $RAKE_OPTS
+RETVAL=$?
+cd $CUR_DIR
+exit $RETVAL

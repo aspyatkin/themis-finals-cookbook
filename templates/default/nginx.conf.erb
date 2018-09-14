@@ -195,7 +195,7 @@ server {
     <% end %>
     deny all;
 
-    set $contest_title "<%= @contest_title %>";
+    set $contest_title "<%= @competition_title %>";
     ssi on;
     root <%= @visualization_basedir %>;
   }

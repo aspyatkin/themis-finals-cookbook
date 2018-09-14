@@ -1,10 +1,10 @@
 id = 'themis-finals'
 instance = ::ChefCookbook::Instance::Helper.new(node)
+h = ::ChefCookbook::Themis::Finals::Helper.new(node)
 
-basedir = ::File.join(node[id]['basedir'], 'frontend')
 url_repository = "https://github.com/#{node[id]['frontend']['github_repository']}"
 
-directory basedir do
+directory h.frontend_dir do
   owner instance.user
   group instance.group
   mode 0755
@@ -18,7 +18,7 @@ if node.chef_environment.start_with?('development')
   url_repository = "git@github.com:#{node[id]['frontend']['github_repository']}.git"
 end
 
-git2 basedir do
+git2 h.frontend_dir do
   url url_repository
   branch node[id]['frontend']['revision']
   user instance.user
@@ -37,18 +37,18 @@ if node.chef_environment.start_with?('development')
   git_options = git_data_bag_item.nil? ? {} : git_data_bag_item.to_hash.fetch('config', {})
 
   git_options.each do |key, value|
-    git_config "git-config #{key} at #{basedir}" do
+    git_config "git-config #{key} at #{h.frontend_dir}" do
       key key
       value value
       scope 'local'
-      path basedir
+      path h.frontend_dir
       user instance.user
       action :set
     end
   end
 end
 
-yarn_install basedir do
+yarn_install h.frontend_dir do
   user instance.user
   action :run
 end
@@ -56,15 +56,15 @@ end
 customize_cookbook = node[id].fetch('customize_cookbook', nil)
 frontend_customize_module = node[id].fetch('frontend_customize_module', nil)
 if customize_cookbook.nil? || frontend_customize_module.nil?
-  execute "Copy customization file at #{basedir}" do
+  execute "Copy customization file at #{h.frontend_dir}" do
     command 'cp customize.example.js customize.js'
-    cwd basedir
+    cwd h.frontend_dir
     user instance.user
     group instance.group
-    not_if "test -e #{basedir}/customize.js"
+    not_if "test -e #{h.frontend_dir}/customize.js"
   end
 else
-  cookbook_file ::File.join(basedir, 'customize.js') do
+  cookbook_file ::File.join(h.frontend_dir, 'customize.js') do
     cookbook customize_cookbook
     source frontend_customize_module
     owner instance.user
@@ -76,7 +76,7 @@ end
 
 unless customize_cookbook.nil?
   node[id].fetch('frontend_extra_files', {}).each do |name_, path_path|
-    full_path = ::File.join(basedir, path_path)
+    full_path = ::File.join(h.frontend_dir, path_path)
     cookbook_file full_path do
       cookbook customize_cookbook
       source name_
@@ -88,10 +88,10 @@ unless customize_cookbook.nil?
   end
 end
 
-yarn_run "Build scripts at #{basedir}" do
+yarn_run "Build scripts at #{h.frontend_dir}" do
   script 'build'
   user instance.user
-  dir basedir
+  dir h.frontend_dir
   production node.chef_environment.start_with?('production')
   action :run
 end

@@ -1,6 +1,7 @@
 id = 'themis-finals'
 
 secret = ::ChefCookbook::Secret::Helper.new(node)
+h = ::ChefCookbook::Themis::Finals::Helper.new(node)
 
 include_recipe 'database::postgresql'
 
@@ -8,11 +9,9 @@ postgresql_connection_info = {}
 
 ruby_block 'configure postgres' do
   block do
-    postgres_host, postgres_port = ::ChefCookbook::LocalDNS::resolve_service('postgres', 'tcp', node['themis']['finals']['ns'])
-
     postgresql_connection_info = {
-      host: postgres_host,
-      port: postgres_port,
+      host: h.postgres_host,
+      port: h.postgres_port,
       username: 'postgres',
       password: secret.get('postgres:password:postgres')
     }

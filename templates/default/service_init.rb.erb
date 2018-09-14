@@ -1,0 +1,14 @@
+module Themis
+  module Finals
+    module Configuration
+      <% @services.each do |service_alias, service_data| %>
+      service '<%= service_alias %>' do
+        name '<%= service_data['name'] %>'
+        hostmask '<%= service_data['hostmask'] %>'
+        checker_endpoint '<%= service_data['checker_endpoint'] %>'
+        attack_priority <%= service_data.has_key?('attack_priority') ? service_data['attack_priority'].to_s : 'false' %>
+      end
+      <% end %>
+    end
+  end
+end
