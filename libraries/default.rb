@@ -47,6 +47,7 @@ module ChefCookbook
             'THEMIS_FINALS_MASTER_FQDN' => @node[@id]['fqdn'],
 
             'THEMIS_FINALS_TEAM_LOGO_DIR' => team_logo_dir,
+            'THEMIS_FINALS_UPLOAD_DIR' => upload_dir,
 
             'THEMIS_FINALS_AUTH_CHECKER_USERNAME' => @secret.get('themis-finals:auth:checker:username'),
             'THEMIS_FINALS_AUTH_CHECKER_PASSWORD' => @secret.get('themis-finals:auth:checker:password'),
@@ -61,6 +62,10 @@ module ChefCookbook
 
         def backend_dir
           ::File.join(@node[@id]['basedir'], 'backend')
+        end
+
+        def upload_dir
+          ::File.join(@node[@id]['basedir'], 'upload')
         end
 
         def script_dir

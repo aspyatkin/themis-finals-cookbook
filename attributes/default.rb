@@ -30,3 +30,10 @@ default[id]['stream']['processes'] = 2
 
 default[id]['visualization']['github_repository'] = 'themis-project/themis-finals-visualization'
 default[id]['visualization']['revision'] = 'master'
+
+default[id]['tasks']['cleanup_upload_dir']['enabled'] = false
+default[id]['tasks']['cleanup_upload_dir']['cron']['minute'] = '*/30'
+default[id]['tasks']['cleanup_upload_dir']['cron']['hour'] = '*'
+default[id]['tasks']['cleanup_upload_dir']['cron']['day'] = '*'
+default[id]['tasks']['cleanup_upload_dir']['cron']['month'] = '*'
+default[id]['tasks']['cleanup_upload_dir']['cron']['weekday'] = '*'

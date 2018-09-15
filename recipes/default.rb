@@ -5,6 +5,8 @@ h = ::ChefCookbook::Themis::Finals::Helper.new(node)
 
 include_recipe "themis-finals-utils::install_ruby"
 include_recipe "#{id}::prerequisite_postgres"
+include_recipe 'graphicsmagick::default'
+include_recipe 'graphicsmagick::devel'
 
 directory node[id]['basedir'] do
   owner instance.user
@@ -36,21 +38,6 @@ directory h.team_logo_dir do
   mode 0755
   recursive true
   action :create
-end
-
-customize_cookbook = node[id].fetch('customize_cookbook', nil)
-unless customize_cookbook.nil?
-  node[id].fetch('team_logo_files', {}).each do |name_, path_path|
-    full_path = ::File.join(h.team_logo_dir, path_path)
-    cookbook_file full_path do
-      cookbook customize_cookbook
-      source name_
-      owner instance.user
-      group instance.group
-      mode 0644
-      action :create
-    end
-  end
 end
 
 include_recipe "#{id}::backend"

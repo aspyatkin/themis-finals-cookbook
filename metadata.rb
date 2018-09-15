@@ -1,6 +1,6 @@
 name 'themis-finals'
 description 'Installs and configures Themis Finals'
-version '2.1.0'
+version '2.2.0'
 
 recipe 'themis-finals', 'Installs and configures Themis Finals'
 depends 'git'
@@ -18,6 +18,7 @@ depends 'instance', '~> 2.0.0'
 depends 'secret', '~> 1.0.0'
 depends 'localdns', '~> 1.3.0'
 depends 'htpasswd', '~> 0.3.0'
+depends 'graphicsmagick', '~> 0.1.0'
 
 depends 'themis-finals-customize-default', '~> 1.0.0'
 depends 'volgactf-2018-final-customizer', '~> 1.0.0'

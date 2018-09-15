@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+RUN_USER=${TARGET_USER:-"<%= @run_user %>"}
+if [ "$(whoami)" != "$RUN_USER" ]; then
+  exec sudo -u "$RUN_USER" -- "$0" "$@"
+fi
+
+find <%= @upload_dir %> -name '*.*' -mmin +10 -delete > /dev/null

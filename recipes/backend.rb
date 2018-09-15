@@ -13,6 +13,40 @@ directory h.backend_dir do
   action :create
 end
 
+directory h.upload_dir do
+  owner instance.user
+  group instance.group
+  mode 0755
+  recursive true
+  action :create
+end
+
+if node[id]['tasks']['cleanup_upload_dir']['enabled']
+  cleanup_upload_dir_script = ::File.join(h.script_dir, 'cleanup_upload_dir')
+
+  template cleanup_upload_dir_script do
+    source 'cleanup_upload_dir.sh.erb'
+    owner instance.user
+    group instance.group
+    variables(
+      run_user: instance.user,
+      upload_dir: h.upload_dir
+    )
+    mode 0755
+    action :create
+  end
+
+  cron 'themis_quals_cleanup_upload_dir' do
+    command "#{cleanup_upload_dir_script}"
+    minute node[id]['tasks']['cleanup_upload_dir']['cron']['minute']
+    hour node[id]['tasks']['cleanup_upload_dir']['cron']['hour']
+    day node[id]['tasks']['cleanup_upload_dir']['cron']['day']
+    month node[id]['tasks']['cleanup_upload_dir']['cron']['month']
+    weekday node[id]['tasks']['cleanup_upload_dir']['cron']['weekday']
+    action :create
+  end
+end
+
 if node.chef_environment.start_with?('development')
   ssh_private_key instance.user
   ssh_known_hosts_entry 'github.com'
