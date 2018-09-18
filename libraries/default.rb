@@ -32,12 +32,20 @@ module ChefCookbook
           {
             'REDIS_HOST' => redis_host,
             'REDIS_PORT' => redis_port,
-            'REDIS_PASSWORD' => @secret.get('redis:password', required: false, default: nil),
+            'REDIS_PASSWORD' => @secret.get(
+              'redis:password',
+              required: false,
+              default: nil,
+              prefix_fqdn: @node[@id]['redis_secret']['prefix_fqdn'].nil? ? @node['secret']['prefix_fqdn'] : @node[@id]['redis_secret']['prefix_fqdn']
+            ),
 
             'PG_HOST' => postgres_host,
             'PG_PORT' => postgres_port,
             'PG_USERNAME' => @node[@id]['postgres']['username'],
-            'PG_PASSWORD' => @secret.get("postgres:password:#{@node[@id]['postgres']['username']}"),
+            'PG_PASSWORD' => @secret.get(
+              "postgres:password:#{@node[@id]['postgres']['username']}",
+              prefix_fqdn: @node[@id]['postgres_secret']['prefix_fqdn'].nil? ? @node['secret']['prefix_fqdn'] : @node[@id]['postgres_secret']['prefix_fqdn']
+            ),
             'PG_DATABASE' => @node[@id]['postgres']['dbname'],
 
             'THEMIS_FINALS_STREAM_REDIS_DB' => @node[@id]['stream']['redis_db'],

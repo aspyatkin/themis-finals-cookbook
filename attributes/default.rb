@@ -37,3 +37,11 @@ default[id]['tasks']['cleanup_upload_dir']['cron']['hour'] = '*'
 default[id]['tasks']['cleanup_upload_dir']['cron']['day'] = '*'
 default[id]['tasks']['cleanup_upload_dir']['cron']['month'] = '*'
 default[id]['tasks']['cleanup_upload_dir']['cron']['weekday'] = '*'
+
+default[id]['postgres_secret']['prefix_fqdn'] = nil
+default[id]['redis_secret']['prefix_fqdn'] = nil
+default[id]['netdata_secret']['prefix_fqdn'] = nil
+
+default[id]['monitoring']['fqdn'] = nil
+default[id]['monitoring']['netdata']['version'] = 'v1.10.0'
+default[id]['monitoring']['netdata']['global']['history'] = 7_200

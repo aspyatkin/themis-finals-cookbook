@@ -13,7 +13,10 @@ ruby_block 'configure postgres' do
       host: h.postgres_host,
       port: h.postgres_port,
       username: 'postgres',
-      password: secret.get('postgres:password:postgres')
+      password: secret.get(
+        'postgres:password:postgres',
+        prefix_fqdn: node[id]['postgres_secret']['prefix_fqdn'].nil? ? node['secret']['prefix_fqdn'] : node[id]['postgres_secret']['prefix_fqdn']
+      )
     }
   end
   action :run
@@ -27,7 +30,10 @@ end
 postgresql_database_user node[id]['postgres']['username'] do
   connection lazy { postgresql_connection_info }
   database_name node[id]['postgres']['dbname']
-  password secret.get("postgres:password:#{node[id]['postgres']['username']}")
+  password secret.get(
+    "postgres:password:#{node[id]['postgres']['username']}",
+    prefix_fqdn: node[id]['postgres_secret']['prefix_fqdn'].nil? ? node['secret']['prefix_fqdn'] : node[id]['postgres_secret']['prefix_fqdn']
+  )
   privileges [:all]
   action [:create, :grant]
 end

@@ -118,7 +118,10 @@ template dump_db_script do
       pg_host: h.postgres_host,
       pg_port: h.postgres_port,
       pg_username: node[id]['postgres']['username'],
-      pg_password: secret.get("postgres:password:#{node[id]['postgres']['username']}"),
+      pg_password: secret.get(
+        "postgres:password:#{node[id]['postgres']['username']}",
+        prefix_fqdn: node[id]['postgres_secret']['prefix_fqdn'].nil? ? node['secret']['prefix_fqdn'] : node[id]['postgres_secret']['prefix_fqdn']
+      ),
       pg_dbname: node[id]['postgres']['dbname']
     }
   }
