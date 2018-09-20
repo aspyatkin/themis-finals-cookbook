@@ -152,6 +152,51 @@ nginx_site 'themis-finals' do
   action :enable
 end
 
+if node[id]['tasks']['backup']['enabled']
+  python_package 'awscli' do
+    action :install
+  end
+
+  backup_script = ::File.join(h.script_dir, 'backup')
+  aws_prefix_fqdn = node[id]['aws_secret']['prefix_fqdn'].nil? ? node['secret']['prefix_fqdn'] : node[id]['aws_secret']['prefix_fqdn']
+
+  template backup_script do
+    source 'backup.sh.erb'
+    owner instance.user
+    group instance.group
+    variables lazy {
+      {
+        run_user: instance.user,
+        team_logo_file_dir: h.team_logo_dir,
+        pg_host: h.postgres_host,
+        pg_port: h.postgres_port,
+        pg_username: node[id]['postgres']['username'],
+        pg_password: secret.get(
+          "postgres:password:#{node[id]['postgres']['username']}",
+          prefix_fqdn: node[id]['postgres_secret']['prefix_fqdn'].nil? ? node['secret']['prefix_fqdn'] : node[id]['postgres_secret']['prefix_fqdn']
+        ),
+        pg_dbname: node[id]['postgres']['dbname'],
+        aws_access_key_id: secret.get('aws:access_key_id', prefix_fqdn: aws_prefix_fqdn),
+        aws_secret_access_key: secret.get('aws:secret_access_key', prefix_fqdn: aws_prefix_fqdn),
+        aws_default_region: secret.get('aws:default_region', prefix_fqdn: aws_prefix_fqdn),
+        aws_s3_bucket: secret.get('aws:s3_bucket', prefix_fqdn: aws_prefix_fqdn)
+      }
+    }
+    mode 0755
+    action :create
+  end
+
+  cron 'themis_finals_backup' do
+    command "#{backup_script}"
+    minute node[id]['tasks']['backup']['cron']['minute']
+    hour node[id]['tasks']['backup']['cron']['hour']
+    day node[id]['tasks']['backup']['cron']['day']
+    month node[id]['tasks']['backup']['cron']['month']
+    weekday node[id]['tasks']['backup']['cron']['weekday']
+    action :create
+  end
+end
+
 template '/usr/local/bin/themis-final-cli' do
   source 'themis-final-cli.sh.erb'
   user instance.root

@@ -1,0 +1,21 @@
+#!/usr/bin/env sh
+RUN_USER=${TARGET_USER:-"<%= @run_user %>"}
+if [ "$(whoami)" != "$RUN_USER" ]; then
+  exec sudo -u "$RUN_USER" -- "$0" "$@"
+fi
+
+TMP_DIR=`mktemp -d`
+cd $TMP_DIR
+
+DB_DUMP_FILE="db.dump"
+TEAM_LOGO_FILE_ARCHIVE="team_logo_files.tar.gz"
+
+PGPASSWORD="<%= @pg_password %>" pg_dump -h <%= @pg_host %> -p <%= @pg_port %> -U <%= @pg_username %> -d <%= @pg_dbname %> > $DB_DUMP_FILE
+tar -zcvf $TEAM_LOGO_FILE_ARCHIVE -C <%= @team_logo_file_dir %> .
+
+UPLOAD_DIR=`date +"%Y_%m_%d__%H_%M_%S"`
+
+AWS_ACCESS_KEY_ID=<%= @aws_access_key_id %> AWS_SECRET_ACCESS_KEY=<%= @aws_secret_access_key %> AWS_DEFAULT_REGION=<%= @aws_default_region %> AWS_DEFAULT_OUTPUT=text aws s3 cp $DB_DUMP_FILE s3://<%= @aws_s3_bucket %>/$UPLOAD_DIR/$DB_DUMP_FILE
+AWS_ACCESS_KEY_ID=<%= @aws_access_key_id %> AWS_SECRET_ACCESS_KEY=<%= @aws_secret_access_key %> AWS_DEFAULT_REGION=<%= @aws_default_region %> AWS_DEFAULT_OUTPUT=text aws s3 cp $TEAM_LOGO_FILE_ARCHIVE s3://<%= @aws_s3_bucket %>/$UPLOAD_DIR/$TEAM_LOGO_FILE_ARCHIVE
+
+rm -rf $TMP_DIR

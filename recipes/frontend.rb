@@ -93,5 +93,8 @@ yarn_run "Build scripts at #{h.frontend_dir}" do
   user instance.user
   dir h.frontend_dir
   production node.chef_environment.start_with?('production')
+  environment(
+    'THEMIS_FINALS_PRODUCTION' => node.chef_environment.start_with?('production') ? 'yes' : 'no'
+  )
   action :run
 end

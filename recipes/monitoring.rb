@@ -114,6 +114,7 @@ fqdn = node[id]['monitoring']['fqdn']
 
 nginx_vhost_template_vars = {
   fqdn: fqdn,
+  port: node[id]['monitoring']['port'],
   htpasswd_file: htpasswd_file,
   netdata_host: netdata_host,
   netdata_port: netdata_port,

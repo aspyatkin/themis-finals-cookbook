@@ -5,7 +5,7 @@ upstream netdata {
 
 server {
   server_name <%= @fqdn %>;
-  listen 80;
+  listen <%= @port %>;
 
   <% unless @htpasswd_file.nil? %>
   auth_basic "Access restricted";
